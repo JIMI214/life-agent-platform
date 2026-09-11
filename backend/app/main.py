@@ -74,7 +74,13 @@ class ActionHistory(Owned,Base):
 
 Base.metadata.create_all(engine)
 app=FastAPI(title="Context-aware Multimodal Life Agent API",version="1.1.0")
-_local_origins=["http://localhost:3000","http://127.0.0.1:3000","http://localhost:3001","http://127.0.0.1:3001"]
+_local_origins=[
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://localhost:3001",
+    "http://127.0.0.1:3001",
+    "https://life-agent-platform.vercel.app",
+]
 _extra_origins=[x.strip() for x in os.getenv("FRONTEND_ORIGINS","").split(",") if x.strip()]
 app.add_middleware(CORSMiddleware,allow_origins=list(dict.fromkeys(_local_origins+_extra_origins)),allow_credentials=True,allow_methods=["*"],allow_headers=["*"])
 
