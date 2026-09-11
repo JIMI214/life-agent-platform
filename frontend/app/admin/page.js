@@ -48,7 +48,7 @@ export default function AdminPage(){
 
   return <main className="adminPage">
     <header className="adminTopbar">
-      <div><p className="eyebrow">LIFE AGENT · ADMIN CONSOLE</p><h1>{L('관리자 대시보드','管理员后台')} <span>v1.2</span><small className="enTitle">Administrator Dashboard</small></h1></div>
+      <div><p className="eyebrow">LIFE AGENT · ADMIN CONSOLE</p><h1>{L('관리자 대시보드','管理员后台')} <span>v1.3.1</span><small className="enTitle">Administrator Dashboard</small></h1></div>
       <div className="adminTopActions">
         <div className="languageSwitch" aria-label="Language"><button className={lang==='ko'?'active':''} onClick={()=>changeLanguage('ko')}>한국어</button><button className={lang==='zh'?'active':''} onClick={()=>changeLanguage('zh')}>中文</button></div>
         <span>{me?`@${me.username}`:'ADMIN'}</span><button onClick={()=>location.href='/'}>← {L('사용자 화면','用户界面')} · User View</button>

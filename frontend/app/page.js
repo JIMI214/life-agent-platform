@@ -77,7 +77,7 @@ export default function Home() {
   const L = (ko, zh) => lang === 'zh' ? zh : ko;
 
   // Backend demo/rule-engine payloads are intentionally language-neutral at the API boundary,
-  // but older v1.2 responses contain Korean explanatory text. In Chinese UI mode every
+  // but older v1.3.1 responses contain Korean explanatory text. In Chinese UI mode every
   // backend-originated display string is normalized here so interaction results never leak Korean.
   const T = (value) => {
     if (value === null || value === undefined) return '';
@@ -343,7 +343,7 @@ export default function Home() {
       const d = await refresh();
       if (!j.pending_action && d) setAfterContext(snapshot(d));
     } catch {
-      setReply(L('백엔드에 연결할 수 없습니다. FastAPI v1.2 실행 상태를 확인해 주세요.','无法连接后端，请检查 FastAPI v1.2 运行状态。'));
+      setReply(L('백엔드에 연결할 수 없습니다. FastAPI v1.3.1 실행 상태를 확인해 주세요.','无法连接后端，请检查 FastAPI v1.3.1 运行状态。'));
       setLastDecision(L('연결 실패 · Connection failed','连接失败 · Connection failed'));
     }
     setBusy(false);
@@ -415,7 +415,7 @@ export default function Home() {
       setAfterContext(snapshot(data));
       setLastDecision(L('읽기 전용 통합 계획 · 데이터 변경 없음','只读综合计划 · 数据未修改'));
     } catch {
-      setReply(L('통합 계획 생성에 실패했습니다. FastAPI v1.2 실행 상태를 확인해 주세요.','综合计划生成失败，请检查 FastAPI v1.2 运行状态。'));
+      setReply(L('통합 계획 생성에 실패했습니다. FastAPI v1.3.1 실행 상태를 확인해 주세요.','综合计划生成失败，请检查 FastAPI v1.3.1 运行状态。'));
       setLastDecision(L('계획 실패','规划失败'));
     }
     setPlannerBusy(false);
@@ -441,7 +441,7 @@ export default function Home() {
       setAfterContext(snapshot(data));
       setLastDecision(L(`로컬 추론 완료 · 위험 ${j.risk}`,`本地推理完成 · 风险 ${j.risk}`));
     } catch {
-      setReply(L('의사결정 분석에 실패했습니다. FastAPI v1.2 실행 상태를 확인해 주세요.','决策分析失败，请检查 FastAPI v1.2 运行状态。'));
+      setReply(L('의사결정 분석에 실패했습니다. FastAPI v1.3.1 실행 상태를 확인해 주세요.','决策分析失败，请检查 FastAPI v1.3.1 运行状态。'));
       setLastDecision(L('추론 실패','推理失败'));
     }
     setDecisionBusy(false);
@@ -498,7 +498,7 @@ export default function Home() {
       ]);
       setLastDecision(L('평가 완료','评估完成'));
     } catch {
-      setReply(L('평가에 실패했습니다. FastAPI v1.2 실행 상태를 확인해 주세요.','评估失败，请确认 FastAPI v1.2 正在运行。'));
+      setReply(L('평가에 실패했습니다. FastAPI v1.3.1 실행 상태를 확인해 주세요.','评估失败，请确认 FastAPI v1.3.1 正在运行。'));
       setLastDecision(L('평가 실패','评估失败'));
     }
     setEvaluationBusy(false);
@@ -518,7 +518,7 @@ export default function Home() {
       setReply(L('발표 시연 환경 준비 완료: 데모 데이터, 평가 지표, 시스템 요약이 생성되었습니다.','答辩演示环境已准备完成：已生成演示数据、评估指标和系统摘要。'));
       setLastDecision('DEFENSE MODE READY');
     } catch {
-      setReply(L('발표 시연 모드 준비에 실패했습니다. FastAPI v1.2 실행 상태를 확인해 주세요.','答辩演示模式准备失败，请检查 FastAPI v1.2 运行状态。'));
+      setReply(L('발표 시연 모드 준비에 실패했습니다. FastAPI v1.3.1 실행 상태를 확인해 주세요.','答辩演示模式准备失败，请检查 FastAPI v1.3.1 运行状态。'));
     }
     setDefenseBusy(false);
   }
@@ -528,7 +528,7 @@ export default function Home() {
     const payload = {generated_at:new Date().toISOString(), user:{username:user.username,display_name:user.display_name}, ...defenseSummary};
     const blob = new Blob([JSON.stringify(payload,null,2)], {type:'application/json'});
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a'); a.href=url; a.download='life-agent-v1.2-defense-report.json'; a.click();
+    const a = document.createElement('a'); a.href=url; a.download='life-agent-v1.3.1-defense-report.json'; a.click();
     setTimeout(()=>URL.revokeObjectURL(url),500);
   }
 
@@ -591,13 +591,13 @@ export default function Home() {
     };
   }, [beforeContext, afterContext]);
 
-  if (!authReady) return <main className="authPage"><section className="authCard card"><div className="authLangRow"><div className="languageSwitch" aria-label="Language"><button className={lang==='ko'?'active':''} onClick={()=>changeLanguage('ko')}>한국어</button><button className={lang==='zh'?'active':''} onClick={()=>changeLanguage('zh')}>中文</button></div></div><span className="sectionTag">LIFE AGENT v1.2 · SECURE SESSION</span><h1>{L('보안 세션 복원 중…','正在恢复安全会话…')}<small className="enTitle">Restoring secure session…</small></h1></section></main>;
+  if (!authReady) return <main className="authPage"><section className="authCard card"><div className="authLangRow"><div className="languageSwitch" aria-label="Language"><button className={lang==='ko'?'active':''} onClick={()=>changeLanguage('ko')}>한국어</button><button className={lang==='zh'?'active':''} onClick={()=>changeLanguage('zh')}>中文</button></div></div><span className="sectionTag">LIFE AGENT v1.3.1 · SECURE SESSION</span><h1>{L('보안 세션 복원 중…','正在恢复安全会话…')}<small className="enTitle">Restoring secure session…</small></h1></section></main>;
 
   if (!token || !user) return <main className="authPage">
     <section className="authCard card">
       <div className="authLangRow"><div className="languageSwitch" aria-label="Language"><button className={lang==='ko'?'active':''} onClick={()=>changeLanguage('ko')}>한국어</button><button className={lang==='zh'?'active':''} onClick={()=>changeLanguage('zh')}>中文</button></div></div>
       <span className="sectionTag">USER AUTHENTICATION</span>
-      <h1>{authMode==='register' ? L('회원가입','用户注册') : L('사용자 로그인','用户登录')} <span>v1.2</span><small className="enTitle">{authMode==='register' ? 'Create Account' : 'User Login'}</small></h1>
+      <h1>{authMode==='register' ? L('회원가입','用户注册') : L('사용자 로그인','用户登录')} <span>v1.3.1</span><small className="enTitle">{authMode==='register' ? 'Create Account' : 'User Login'}</small></h1>
       <p>{L('각 계정은 독립적인 Schedule / Task / Expense / Ingredient / Preference Context를 사용합니다. 사용자 간 데이터는 서로 섞이지 않습니다.','每个账号都使用独立的 Schedule / Task / Expense / Ingredient / Preference Context，不同用户的数据不会相互混合。')}<small className="enTitle block">Each account uses isolated personal context and user data never mixes across accounts.</small></p>
       {authMode==='register' && <input placeholder={L('표시 이름 · Display name','显示名称 · Display name')} value={authForm.display_name} onChange={e=>setAuthForm({...authForm,display_name:e.target.value})}/>} 
       <input placeholder={L('사용자 이름 · Username','用户名 · Username')} value={authForm.username} onChange={e=>setAuthForm({...authForm,username:e.target.value})}/>
@@ -613,7 +613,7 @@ export default function Home() {
     <header className="topbar">
       <div>
         <p className="eyebrow">CONTEXT-AWARE PERSONAL LIFE AGENT</p>
-        <h1>Life Agent <span>v1.2</span></h1>
+        <h1>Life Agent <span>v1.3.1</span></h1>
         <p className="subtitle">Voice Input · API-ready LLM Layer · Multimodal Review · User-isolated Context · Human-in-the-loop</p>
       </div>
       <div className="headerActions">
@@ -625,7 +625,7 @@ export default function Home() {
     </header>
 
     <section className="card defenseCard">
-      <div className="cardHead"><div><span className="sectionTag">DEFENSE MODE · v1.2</span><h3>{L('원클릭 졸업작품 발표 준비','一键准备答辩演示')}<small className="enTitle">One-click Defense Demo</small></h3></div><small>{defenseSummary?.demo_ready ? 'READY' : 'NOT PREPARED'}</small></div>
+      <div className="cardHead"><div><span className="sectionTag">DEFENSE MODE · v1.3.1</span><h3>{L('원클릭 졸업작품 발표 준비','一键准备答辩演示')}<small className="enTitle">One-click Defense Demo</small></h3></div><small>{defenseSummary?.demo_ready ? 'READY' : 'NOT PREPARED'}</small></div>
       <div className="defenseIntro"><div><h4>{L('교수님의 핵심 질문에 답할 근거를 한곳에 모았습니다.','把答辩中最容易被追问的证据集中在一个地方。')}<small className="enTitle">Evidence for the key defense questions is collected in one place.</small></h4><p>{L('데모 Context를 자동 로드하고 로컬 평가를 실행한 뒤 아키텍처, 사용자 격리, Safety Gate, Undo, capability 상태를 요약합니다. API Key가 없어도 핵심 시스템을 완전히 시연할 수 있습니다.','自动加载演示 Context 并运行本地评估，然后汇总架构、用户隔离、Safety Gate、Undo 与 capability 状态。即使没有 API Key，也能完整演示核心系统。')}</p></div><div className="defenseActions"><button className="primary" onClick={prepareDefenseDemo} disabled={defenseBusy || busy}>{defenseBusy?L('시연 환경 준비 중…','正在准备演示环境…'):L('발표 시연 준비','准备答辩演示')}</button><button className="ghost" onClick={exportDefenseReport} disabled={!defenseSummary}>{L('실험 요약 내보내기','导出实验摘要')}</button></div></div>
       {defenseSummary && <div className="defenseGrid">
         <div><span>ARCHITECTURE</span><b>8 stages</b><small>{defenseSummary.architecture.join(' → ')}</small></div>
@@ -705,7 +705,7 @@ export default function Home() {
           </div>)}
         </div>
         <div className="plannerInsights"><span>WHY THIS PLAN</span>{(dailyPlan.insights || []).map((x,i)=><p key={i}>✓ {T(x)}</p>)}</div>
-      </> : <div className="emptyTrace compact">{L('데모 데이터를 불러온 뒤 “내일 통합 계획 생성”을 클릭하세요. v1.2는 일정, 할 일, 식재료, 지출, 선호를 한 번의 계획에 반영하고 각 결정의 Context 근거를 표시합니다.','加载演示数据后点击“生成明日综合计划”。v1.2 会在一次规划中综合日程、待办、食材、支出和偏好，并显示每个决策的 Context 依据。')}</div>}
+      </> : <div className="emptyTrace compact">{L('데모 데이터를 불러온 뒤 “내일 통합 계획 생성”을 클릭하세요. v1.3.1는 일정, 할 일, 식재료, 지출, 선호를 한 번의 계획에 반영하고 각 결정의 Context 근거를 표시합니다.','加载演示数据后点击“生成明日综合计划”。v1.3.1 会在一次规划中综合日程、待办、食材、支出和偏好，并显示每个决策的 Context 依据。')}</div>}
     </section>
 
 
@@ -715,7 +715,7 @@ export default function Home() {
         <small>NO API REQUIRED</small>
       </div>
       <div className="reasoningIntro">
-        <div><h4>{L('결정적 제약 조건을 먼저 계산한 뒤, 대규모 모델 필요 여부를 판단합니다.','先计算确定性约束，再判断是否需要大模型。')}<small className="enTitle">Deterministic constraints first, model escalation second.</small></h4><p>{L('후보 일정을 입력하면 v1.2가 기존 Schedule / Task Context를 읽고 로컬에서 시간 충돌, 위험 점수, 할 일 우선순위, 대체 시간을 계산합니다. API를 호출하지 않으며 데이터베이스를 자동 변경하지 않습니다.','输入候选日程后，v1.2 会读取现有 Schedule / Task Context，在本地计算时间冲突、风险分数、待办优先级和替代时间。不会调用 API，也不会自动修改数据库。')}</p></div>
+        <div><h4>{L('결정적 제약 조건을 먼저 계산한 뒤, 대규모 모델 필요 여부를 판단합니다.','先计算确定性约束，再判断是否需要大模型。')}<small className="enTitle">Deterministic constraints first, model escalation second.</small></h4><p>{L('후보 일정을 입력하면 v1.3.1가 기존 Schedule / Task Context를 읽고 로컬에서 시간 충돌, 위험 점수, 할 일 우선순위, 대체 시간을 계산합니다. API를 호출하지 않으며 데이터베이스를 자동 변경하지 않습니다.','输入候选日程后，v1.3.1 会读取现有 Schedule / Task Context，在本地计算时间冲突、风险分数、待办优先级和替代时间。不会调用 API，也不会自动修改数据库。')}</p></div>
         <div className="decisionForm">
           <input value={decisionInput.title} onChange={e=>setDecisionInput({...decisionInput,title:e.target.value})} placeholder={L('후보 계획 예: 병원 가기 · Candidate plan','候选计划，例如：去医院 · Candidate plan')} />
           <input value={decisionInput.proposed_at} onChange={e=>setDecisionInput({...decisionInput,proposed_at:e.target.value})} placeholder={L('예: 내일 15:00 · Proposed time','例如：明天 15:00 · Proposed time')} />
@@ -788,7 +788,7 @@ export default function Home() {
       <div className="evaluationIntro">
         <div className="evaluationCopy">
           <h4>{L('단순히 “작동한다”를 보여주는 것이 아니라 “올바르게 작동하는가”를 측정합니다.','不只是展示“能运行”，而是测量“是否运行正确”。')}<small className="enTitle">Measure whether the system works correctly, not merely whether it runs.</small></h4>
-          <p className="evaluationDescription">{L('v1.2는 로컬 결정적 테스트 스위트를 유지하여 시간 충돌 감지, 할 일 우선순위, Context 커버리지, 읽기 전용 Safety Gate, 사용자 데이터 격리를 검증합니다. 결과는 반복 실행 가능하며 졸업논문 실험·평가 장에 활용할 수 있습니다.','v1.2 通过本地确定性测试套件验证时间冲突检测、待办优先级、Context 覆盖率、只读 Safety Gate 与用户数据隔离。结果可重复运行，并可用于毕业论文的实验与评估章节。')}<small className="enBody">v1.2 uses a local deterministic test suite to verify schedule-conflict detection, task priority, Context coverage, the read-only Safety Gate, and user-data isolation. The results are reproducible and suitable for the thesis evaluation chapter.</small></p>
+          <p className="evaluationDescription">{L('v1.3.1는 로컬 결정적 테스트 스위트를 유지하여 시간 충돌 감지, 할 일 우선순위, Context 커버리지, 읽기 전용 Safety Gate, 사용자 데이터 격리를 검증합니다. 결과는 반복 실행 가능하며 졸업논문 실험·평가 장에 활용할 수 있습니다.','v1.3.1 通过本地确定性测试套件验证时间冲突检测、待办优先级、Context 覆盖率、只读 Safety Gate 与用户数据隔离。结果可重复运行，并可用于毕业论文的实验与评估章节。')}<small className="enBody">v1.3.1 uses a local deterministic test suite to verify schedule-conflict detection, task priority, Context coverage, the read-only Safety Gate, and user-data isolation. The results are reproducible and suitable for the thesis evaluation chapter.</small></p>
         </div>
         <button className="primary plannerButton evaluationButton" onClick={runEvaluation} disabled={evaluationBusy || busy}>{evaluationBusy ? L('평가 실행 중…','评估运行中…') : L('평가 스위트 실행','运行评估套件')}<small className="buttonEn">{evaluationBusy ? 'Running Evaluation…' : 'Run Evaluation Suite'}</small></button>
       </div>
@@ -854,7 +854,7 @@ export default function Home() {
       <div className="card listCard"><span className="sectionTag">FOOD</span><h3>{L('냉장고 / 식재료','冰箱 / 食材')}</h3>{data.ingredients.length ? data.ingredients.map(x=><div className="row manageRow" key={x.id}><div><b>{T(x.name)}</b><small>{T(x.quantity)}{x.expires_on ? ` · ${T(x.expires_on)}` : ''}</small></div><div><button onClick={()=>editItem('ingredient',x)}>{L('수정 · Edit','修改 · Edit')}</button><button onClick={()=>removeItem('ingredient',x.id)}>{L('삭제 · Delete','删除 · Delete')}</button></div></div>) : <p className="muted">{L('식재료 Context 없음','暂无食材 Context')}</p>}</div>
     </section>
 
-    <footer>Life Agent v1.2 · Voice Input · AI Capability Gateway · Multimodal Review · Evaluation Lab</footer>
+    <footer>Life Agent v1.3.1 · Voice Input · AI Capability Gateway · Multimodal Review · Evaluation Lab</footer>
   
     <nav className="mobileNav" aria-label="Mobile navigation">
       <a href="#home"><span>⌂</span><small>{L('홈','首页')}</small></a>
