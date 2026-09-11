@@ -73,14 +73,8 @@ class ActionHistory(Owned,Base):
     __tablename__="action_history"; id:Mapped[int]=mapped_column(Integer,primary_key=True); operation:Mapped[str]=mapped_column(String(30)); entity_type:Mapped[str]=mapped_column(String(40)); entity_id:Mapped[Optional[int]]=mapped_column(Integer,nullable=True); summary:Mapped[str]=mapped_column(String(300)); before_json:Mapped[Optional[str]]=mapped_column(Text,nullable=True); after_json:Mapped[Optional[str]]=mapped_column(Text,nullable=True); undone:Mapped[bool]=mapped_column(Boolean,default=False); created_at:Mapped[datetime]=mapped_column(DateTime,default=datetime.utcnow)
 
 Base.metadata.create_all(engine)
-app=FastAPI(title="Context-aware Multimodal Life Agent API",version="1.1.0")
-_local_origins=[
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-    "http://localhost:3001",
-    "http://127.0.0.1:3001",
-    "https://life-agent-platform.vercel.app",
-]
+app=FastAPI(title="Context-aware Multimodal Life Agent API",version="1.2.0")
+_local_origins=["http://localhost:3000","http://127.0.0.1:3000","http://localhost:3001","http://127.0.0.1:3001"]
 _extra_origins=[x.strip() for x in os.getenv("FRONTEND_ORIGINS","").split(",") if x.strip()]
 app.add_middleware(CORSMiddleware,allow_origins=list(dict.fromkeys(_local_origins+_extra_origins)),allow_credentials=True,allow_methods=["*"],allow_headers=["*"])
 
@@ -91,10 +85,15 @@ class ExpenseIn(BaseModel): item:str; amount:float; category:str="other"
 class IngredientIn(BaseModel): name:str; quantity:str="1"; expires_on:Optional[str]=None
 class TaskIn(BaseModel): title:str; priority:str="medium"; due_at:Optional[str]=None
 class PreferenceIn(BaseModel): key:str; value:str
-class AgentIn(BaseModel): message:str
-class ConfirmIn(BaseModel): action_id:int; approve:bool=True
-class PlannerIn(BaseModel): horizon:str="tomorrow"
-class DecisionIn(BaseModel): title:str; proposed_at:str; duration_minutes:int=60
+class AgentIn(BaseModel):
+    message:str
+    lang:str="ko"
+class ConfirmIn(BaseModel):
+    action_id:int
+    approve:bool=True
+    lang:str="ko"
+class PlannerIn(BaseModel): horizon:str="tomorrow"; lang:str="ko"
+class DecisionIn(BaseModel): title:str; proposed_at:str; duration_minutes:int=60; lang:str="ko"
 class ScheduleUpdate(BaseModel): title:Optional[str]=None; scheduled_at:Optional[str]=None; status:Optional[str]=None
 class TaskUpdate(BaseModel): title:Optional[str]=None; priority:Optional[str]=None; due_at:Optional[str]=None; completed:Optional[bool]=None
 class ExpenseUpdate(BaseModel): item:Optional[str]=None; amount:Optional[float]=None; category:Optional[str]=None
@@ -180,7 +179,9 @@ def execute_action(db,user_id,action):
             if etype: record_history(db,user_id,"create",etype,created.get("id"),f"Agent 확인 실행: {action.summary}",after=created)
     action.status="approved"; db.commit(); return created
 
-def demo_agent(message: str, context: dict):
+def demo_agent(message: str, context: dict, lang: str = "ko"):
+    zh = str(lang).lower().startswith("zh")
+    def ui(ko, cn): return cn if zh else ko
     lower = message.lower()
     trace = [
         trace_step("input", "사용자 요청 이해", message),
@@ -195,6 +196,24 @@ def demo_agent(message: str, context: dict):
         response = "개인 생활 Context를 바탕으로 계획을 구성했습니다.\n\n현재 일정:\n" + "\n".join(schedule_lines) + "\n\n할 일:\n" + "\n".join(task_lines) + f"\n\n선호: {pref}\n\n제안: 고정 일정을 우선 유지하고 빈 시간에 우선순위가 높은 할 일을 배치하며 휴식 시간을 확보하세요."
         trace.append(trace_step("output", "개인화 계획 생성", "읽기 전용 계획 생성 완료 · 쓰기 작업 없음"))
         return {"route": "planning", "message": response, "trace": trace, "approval_required": False, "pending_action": None}
+
+    task_words = ["待办任务", "待办", "任务", "할 일", "태스크", "task"]
+    create_words = ["创建", "新增", "添加", "记录", "保存", "帮我建", "帮我创建", "帮我添加", "만들", "추가", "등록", "생성", "create", "add"]
+    if any(k in lower for k in ["task"]) or (any(k in message for k in task_words) and any(k in message for k in create_words)):
+        title = message
+        title = re.sub(r"^(帮我|请)?\s*(创建|新增|添加|记录|保存)?\s*(一个|一条)?\s*(待办任务|待办|任务)\s*[:：]?\s*", "", title).strip()
+        title = re.sub(r"^(할 일|태스크)\s*(을|를)?\s*(만들어줘|추가해줘|등록해줘|생성해줘)?\s*[:：]?\s*", "", title).strip() or message
+        due_at = None
+        m = re.search(r"(明天|내일)\s*(?:下午|오후)?\s*(\d{1,2})(?:点|시)(?:(\d{1,2})分?)?", message)
+        if m:
+            hour = int(m.group(2)); minute = int(m.group(3) or 0)
+            if ("下午" in message or "오후" in message) and hour < 12: hour += 12
+            due_at = f"明天 {hour:02d}:{minute:02d}" if any(ch in message for ch in ["待办","任务","创建","添加","新增"]) else f"내일 {hour:02d}:{minute:02d}"
+        trace.append(trace_step("reasoning", "의도 판단", "할 일 생성 작업으로 인식"))
+        trace.append(trace_step("tool", "Tool 호출 준비", "create_task(...)"))
+        trace.append(trace_step("safety", "Human-in-the-loop", "할 일 변경 전 사용자 확인 대기", "waiting"))
+        payload = {"title": title, "priority": "medium", "due_at": due_at}
+        return {"route": "task", "message": (f"已准备创建待办：{title}。确认后将保存到数据库。" if zh else f"할 일 생성 준비: {title}. 확인 후 데이터베이스에 저장됩니다."), "trace": trace, "approval_required": True, "action_type": "create_task", "payload": payload, "summary": (f"创建待办：{title}" if zh else f"할 일 생성: {title}")}
 
     if any(k in message for k in ["消费", "花了", "支出", "小票", "金额", "韩元", "지출", "영수증", "원"]) or "expense" in lower:
         nums = re.findall(r"\d+(?:\.\d+)?", message.replace(",", ""))
@@ -227,9 +246,9 @@ def demo_agent(message: str, context: dict):
     return {"route": "general", "message": "개인 생활 Context를 읽고 일정, 지출, 할 일, 식재료 작업을 처리할 수 있습니다. “내일 일정을 계획해 줘” 또는 “오늘 커피에 4,500원을 썼어”를 시도해 보세요.", "trace": trace, "approval_required": False, "pending_action": None}
 
 
-def openai_agent(message: str, context: dict):
+def openai_agent(message: str, context: dict, lang: str = "ko"):
     if OpenAI is None or not os.getenv("OPENAI_API_KEY"):
-        return demo_agent(message, context)
+        return demo_agent(message, context, lang)
 
     client = OpenAI()
     context_text = json.dumps(context, ensure_ascii=False, default=str)
@@ -258,6 +277,18 @@ def openai_agent(message: str, context: dict):
             },
             "strict": True,
         },
+        {
+            "type": "function",
+            "name": "propose_task",
+            "description": "Propose creating a task/to-do item. This only creates a pending action and requires user confirmation.",
+            "parameters": {
+                "type": "object",
+                "properties": {"title": {"type": "string"}, "priority": {"type": "string"}, "due_at": {"type": ["string", "null"]}},
+                "required": ["title", "priority", "due_at"],
+                "additionalProperties": False,
+            },
+            "strict": True,
+        },
     ]
     response = client.responses.create(
         model=os.getenv("OPENAI_MODEL", "gpt-5.6-luna"),
@@ -265,7 +296,7 @@ def openai_agent(message: str, context: dict):
             "You are a context-aware personal life agent. Use the supplied personal context when relevant. "
             "Never claim to execute a write action directly. Use proposal tools for writes so the user can confirm. "
             "For planning requests, provide a concise personalized plan from context without using a tool. "
-            "Do not invent money amounts or exact dates. Respond in the user's language.\nPERSONAL_CONTEXT=" + context_text
+            "Do not invent money amounts or exact dates. Respond in Simplified Chinese when lang starts with zh, otherwise Korean. UI_LANG=" + str(lang) + "\nPERSONAL_CONTEXT=" + context_text
         ),
         input=message,
         tools=tools,
@@ -280,6 +311,9 @@ def openai_agent(message: str, context: dict):
             if item.name == "propose_schedule":
                 trace += [trace_step("reasoning", "Agent 의사결정", "일정 생성 필요"), trace_step("tool", "Tool 준비", "create_schedule"), trace_step("safety", "확인 대기", "Human-in-the-loop", "waiting")]
                 return {"route": "schedule", "message": f"일정 생성 준비: {args['title']}. 확인 후 실행합니다.", "trace": trace, "approval_required": True, "action_type": "create_schedule", "payload": args, "summary": f"일정 생성: {args['title']}"}
+            if item.name == "propose_task":
+                trace += [trace_step("reasoning", "Agent 의사결정", "할 일 생성 필요"), trace_step("tool", "Tool 준비", "create_task"), trace_step("safety", "확인 대기", "Human-in-the-loop", "waiting")]
+                return {"route": "task", "message": f"할 일 생성 준비: {args['title']}. 확인 후 실행합니다.", "trace": trace, "approval_required": True, "action_type": "create_task", "payload": args, "summary": f"할 일 생성: {args['title']}"}
             if item.name == "propose_expense":
                 trace += [trace_step("reasoning", "Agent 의사결정", "지출 기록 필요"), trace_step("tool", "Tool 준비", "create_expense"), trace_step("safety", "확인 대기", "Human-in-the-loop", "waiting")]
                 return {"route": "expense", "message": f"지출 기록 준비: ₩{args['amount']:,.0f}. 확인 후 실행합니다.", "trace": trace, "approval_required": True, "action_type": "create_expense", "payload": args, "summary": f"지출 기록 ₩{args['amount']:,.0f}"}
@@ -291,7 +325,7 @@ def _priority_rank(priority: str):
     return {"high": 0, "medium": 1, "low": 2}.get((priority or "medium").lower(), 1)
 
 
-def build_demo_plan(context: dict, horizon: str = "tomorrow"):
+def build_demo_plan(context: dict, horizon: str = "tomorrow", lang: str = "ko"):
     schedules = list(context.get("schedules") or [])
     tasks = sorted(list(context.get("tasks") or []), key=lambda x: _priority_rank(x.get("priority")))
     ingredients = list(context.get("ingredients") or [])
@@ -409,9 +443,9 @@ def build_demo_plan(context: dict, horizon: str = "tomorrow"):
     }
 
 
-def build_openai_plan(context: dict, horizon: str = "tomorrow"):
+def build_openai_plan(context: dict, horizon: str = "tomorrow", lang: str = "ko"):
     if OpenAI is None or not os.getenv("OPENAI_API_KEY"):
-        return build_demo_plan(context, horizon)
+        return build_demo_plan(context, horizon, lang)
     client = OpenAI()
     prompt = (
         "Create a concise, explainable personal life plan from the JSON context. "
@@ -419,7 +453,8 @@ def build_openai_plan(context: dict, horizon: str = "tomorrow"):
         "items must be objects with time,title,type,reason,signals. "
         "Never invent exact appointments, money budgets, medical advice, or food expiry dates. "
         "Use only supplied context. This is read-only planning; do not claim to write data. "
-        "Respond in Chinese. CONTEXT=" + json.dumps(context, ensure_ascii=False, default=str)
+        + ("Respond in Simplified Chinese. " if str(lang).lower().startswith("zh") else "Respond in Korean. ")
+        + "CONTEXT=" + json.dumps(context, ensure_ascii=False, default=str)
     )
     r = client.responses.create(model=os.getenv("OPENAI_MODEL", "gpt-5.6-luna"), input=prompt)
     text = (r.output_text or "").strip()
@@ -474,7 +509,7 @@ def _task_score(task: dict):
     return score, reasons
 
 
-def analyze_local_decision(context: dict, title: str, proposed_at: str, duration_minutes: int = 60):
+def analyze_local_decision(context: dict, title: str, proposed_at: str, duration_minutes: int = 60, lang: str = "ko"):
     start = _time_to_minutes(proposed_at)
     duration = max(15, min(int(duration_minutes or 60), 240))
     end = start + duration if start is not None else None
@@ -615,7 +650,7 @@ def run_evaluation_suite(user_id: int):
     }
 
 @app.get("/health")
-def health(): return {"status":"ok","version":"1.1.0","mode":"openai" if os.getenv("OPENAI_API_KEY") else "demo","auth":"enabled","database":"postgresql" if DATABASE_URL.startswith("postgresql") else "sqlite","deployment":"cloud-ready"}
+def health(): return {"status":"ok","version":"1.2.0","mode":"openai" if os.getenv("OPENAI_API_KEY") else "demo","auth":"enabled","database":"postgresql" if DATABASE_URL.startswith("postgresql") else "sqlite","deployment":"cloud-ready"}
 
 @app.get("/capabilities")
 def capabilities():
@@ -623,7 +658,7 @@ def capabilities():
     model = os.getenv("OPENAI_MODEL") or "not configured"
     vision_model = os.getenv("OPENAI_VISION_MODEL") or (model if api_key else "not configured")
     return {
-        "version":"1.1.0",
+        "version":"1.2.0",
         "llm":{"enabled":api_key,"provider":"openai" if api_key else "local_fallback","model":model if api_key else "deterministic rules"},
         "vision":{"enabled":api_key,"provider":"openai" if api_key else "demo_fallback","model":vision_model if api_key else "demo recognizer"},
         "voice":{"enabled":True,"provider":"browser_web_speech","note":"Availability depends on the browser; Chrome/Edge are recommended."},
@@ -799,18 +834,18 @@ def undo_history(history_id:int,user=Depends(auth_user)):
 
 @app.post("/reasoning/analyze")
 def reasoning_analyze(data:DecisionIn,user=Depends(auth_user)):
-    with SessionLocal() as db: return analyze_local_decision(get_context(db,user["id"]),data.title,data.proposed_at,data.duration_minutes)
+    with SessionLocal() as db: return analyze_local_decision(get_context(db,user["id"]),data.title,data.proposed_at,data.duration_minutes,data.lang)
 @app.post("/planner/daily")
 def daily_planner(data:PlannerIn,user=Depends(auth_user)):
     with SessionLocal() as db:
         c=get_context(db,user["id"])
-        try: return build_openai_plan(c,data.horizon)
+        try: return build_openai_plan(c,data.horizon,data.lang)
         except Exception as e:
-            result=build_demo_plan(c,data.horizon); result["warning"]=f"Planner API failed: {type(e).__name__}"; return result
+            result=build_demo_plan(c,data.horizon,data.lang); result["warning"]=f"Planner API failed: {type(e).__name__}"; return result
 @app.post("/agent")
 def agent(data:AgentIn,user=Depends(auth_user)):
     with SessionLocal() as db:
-        c=get_context(db,user["id"]); result=openai_agent(data.message,c); pending=None
+        c=get_context(db,user["id"]); result=openai_agent(data.message,c,data.lang); pending=None
         if result.get("approval_required"): pending=serialize(create_pending_action(db,user["id"],result["action_type"],result["payload"],result["summary"]))
         db.add(AgentLog(user_id=user["id"],user_input=data.message,route=result["route"],response=result["message"],trace_json=json.dumps(result["trace"],ensure_ascii=False))); db.commit()
         return {"route":result["route"],"message":result["message"],"trace":result["trace"],"approval_required":bool(result.get("approval_required")),"pending_action":pending}
@@ -820,8 +855,8 @@ def confirm_action(data:ConfirmIn,user=Depends(auth_user)):
         action=db.query(PendingAction).filter(PendingAction.id==data.action_id,PendingAction.user_id==user["id"]).first()
         if not action: raise HTTPException(404,"Pending action not found")
         if action.status!="pending": raise HTTPException(409,f"Action is already {action.status}")
-        if not data.approve: action.status="rejected"; db.commit(); return {"status":"rejected","created":None,"message":"작업을 취소했습니다. 생활 데이터는 변경되지 않았습니다."}
-        return {"status":"approved","created":execute_action(db,user["id"],action),"message":"확인 후 실행했습니다. Personal Context가 업데이트되었습니다."}
+        if not data.approve: action.status="rejected"; db.commit(); return {"status":"rejected","created":None,"message":("操作已取消，生活数据未发生变化。" if str(data.lang).lower().startswith("zh") else "작업을 취소했습니다. 생활 데이터는 변경되지 않았습니다.")}
+        return {"status":"approved","created":execute_action(db,user["id"],action),"message":("确认后已执行，Personal Context 已更新。" if str(data.lang).lower().startswith("zh") else "확인 후 실행했습니다. Personal Context가 업데이트되었습니다.")}
 
 def _data_url(raw: bytes, content_type: str | None):
     mime = content_type or "image/jpeg"
