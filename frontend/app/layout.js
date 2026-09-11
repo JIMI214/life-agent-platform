@@ -4,8 +4,8 @@ import PwaRegister from './pwa-register';
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
 export const metadata = {
   metadataBase: new URL(siteUrl),
-  title: 'Life Agent | 멀티모달 개인 생활 관리 플랫폼',
-  description: 'Context-aware multimodal personal life management AI Agent platform. 멀티모달 AI Agent 기반 개인 생활 통합 관리 플랫폼.',
+  title: 'Life Agent | Context-aware Multimodal Personal Life Management',
+  description: 'Context-aware multimodal personal life management AI Agent platform.',
   applicationName: 'Life Agent',
   manifest: '/manifest.webmanifest',
   icons: { icon: '/icon-192.png', apple: '/icon-192.png' },
