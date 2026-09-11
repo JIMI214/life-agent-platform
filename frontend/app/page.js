@@ -81,7 +81,7 @@ export default function Home() {
   // backend-originated display string is normalized here so interaction results never leak Korean.
   const T = (value) => {
     if (value === null || value === undefined) return '';
-    if (lang !== 'zh' || typeof value !== 'string') return value;
+    if (typeof value !== 'string') return value;
     let out = value;
     const replacements = [
       ['개인 생활 Context를 읽고 일정, 지출, 할 일, 식재료 작업을 처리할 수 있습니다. “내일 일정을 계획해 줘” 또는 “오늘 커피에 4,500원을 썼어”를 시도해 보세요.','可以读取个人生活 Context，并处理日程、支出、待办和食材操作。可以尝试“帮我安排明天”或“今天咖啡花了4500韩元”。'],
@@ -89,14 +89,14 @@ export default function Home() {
       ['고정 일정을 우선 유지하고 빈 시간에 우선순위가 높은 할 일을 배치하며 휴식 시간을 확보하세요.','优先保留固定日程，把高优先级待办安排到空闲时间，并预留休息时间。'],
       ['이 지출을 기록할 준비가 되었습니다:','已准备记录这笔支出：'], ['확인 후 데이터베이스에 저장됩니다.','确认后将保存到数据库。'],
       ['지출 기록 요청으로 인식했지만 명확한 금액을 찾지 못했습니다. 금액을 입력해 주세요.','已识别为支出记录请求，但未找到明确金额。请输入金额。'],
-      ['일정 생성 준비:','已准备创建日程：'], ['고정 일정 없음','暂无固定日程'], ['할 일 없음','暂无待办'], ['선호 없음','暂无偏好'],
+      ['일정 생성 준비:','已准备创建日程：'], ['할 일 생성 준비:','已准备创建待办：'], ['고정 일정 없음','暂无固定日程'], ['할 일 없음','暂无待办'], ['선호 없음','暂无偏好'],
       ['유효기간이 기록된 식재료가 없습니다','没有记录有效期的食材'], ['냉장고 Context를 읽었습니다:','已读取冰箱 Context：'], ['확인된 이미지 인식 결과는 통합 생활 계획에 반영됩니다.','已确认的图片识别结果会纳入综合生活计划。'],
       ['확인 필요 / TBD','需要确认 / TBD'], ['Agent 식재료 저장','Agent 保存食材'], ['Agent 확인 실행','Agent 确认执行'],
       ['Agent 요청 대기','等待 Agent 请求'], ['컴퓨터공학 수업','计算机工程课程'], ['졸업작품 회의','毕业设计会议'], ['졸업작품 요구사항 정리','整理毕业设计需求'],
       ['Python 복습','Python 复习'], ['병원 가기','去医院'], ['커피','咖啡'], ['편의점','便利店'], ['달걀','鸡蛋'], ['우유','牛奶'], ['토마토','番茄'],
       ['식비','餐饮'], ['생활','生活'], ['6개','6个'], ['1팩','1盒'], ['3개','3个'], ['3일 후','3天后'], ['4일 후','4天后'], ['2일 후','2天后'],
-      ['내일','明天'], ['오늘','今天'], ['이번 주','本周'], ['고정','固定'], ['빈 시간 1','空闲时间 1'], ['빈 시간','空闲时间'],
-      ['첫 집중 블록 설정','设置首个专注时段'], ['기존 일정','已有日程'], ['우선순위 높은 할 일','高优先级待办'],
+      ['내일','明天'], ['오늘','今天'], ['이번 주','本周'], ['고정','固定'], ['미정','未设置'], ['확인 필요','需要确认'], ['새 일정','新日程'], ['새 할 일','新待办'], ['빈 시간 1','空闲时间 1'], ['빈 시간','空闲时间'],
+      ['첫 집중 블록 설정','设置首个专注时段'], ['기존 일정','已有日程'], ['새 일정','新日程'], ['신 일정','新日程'], ['새 할 일','新待办'], ['새 태스크','新待办'], ['우선순위 높은 할 일','高优先级待办'],
       ['유통기한 임박 식재료 우선 사용','优先使用临期食材'], ['보유 식재료로 한 끼 해결','使用现有食材安排一餐'],
       ['지출 의사결정','支出决策'], ['보유 자원을 우선 활용해 불필요한 즉흥 지출을 줄이기','优先利用现有资源，减少不必要的临时支出'],
       ['실행 규칙','执行规则'], ['개인 선호에 맞춰 집중과 마무리 배치','根据个人偏好安排专注与收尾'],
@@ -132,7 +132,7 @@ export default function Home() {
       ['개인화 계획 생성','生成个性化计划'], ['읽기 전용 계획 생성 완료 · 쓰기 작업 없음','只读计划已生成 · 无写入操作'],
       ['의도 판단','意图判断'], ['지출 기록 작업으로 인식','识别为支出记录操作'], ['정보 완전성 검사','信息完整性检查'], ['금액이 없어 작업을 생성하지 않음','缺少金额，未创建操作'],
       ['Tool 호출 준비','准备调用 Tool'], ['데이터베이스 쓰기 전 사용자 확인 대기','数据库写入前等待用户确认'],
-      ['일정 생성 작업으로 인식','识别为创建日程操作'], ['일정 변경 전 사용자 확인 대기','修改日程前等待用户确认'],
+      ['일정 생성 작업으로 인식','识别为创建日程操作'], ['일정 변경 전 사용자 확인 대기','修改日程前等待用户确认'], ['할 일 생성 작업으로 인식','识别为创建待办操作'], ['할 일 변경 전 사용자 확인 대기','修改待办前等待用户确认'], ['할 일 생성 필요','需要创建待办'],
       ['식사·식재료 작업으로 인식','识别为餐食/食材操作'], ['식재료 Context 읽기','读取食材 Context'], ['일반 생활 도우미','通用生活助手'], ['쓰기 작업이 필요한 명확한 의도를 감지하지 못함','未检测到需要写入操作的明确意图'],
       ['Agent 의사결정','Agent 决策'], ['일정 생성 필요','需要创建日程'], ['지출 기록 필요','需要记录支出'], ['Tool 준비','准备 Tool'], ['확인 대기','等待确认'], ['응답 생성','生成响应'], ['Personal Context 기반 결과 반환','返回基于 Personal Context 的结果'],
       ['작업을 취소했습니다. 생활 데이터는 변경되지 않았습니다.','操作已取消，生活数据未发生变化。'], ['확인 후 실행했습니다. Personal Context가 업데이트되었습니다.','确认后已执行，Personal Context 已更新。'],
@@ -154,15 +154,33 @@ export default function Home() {
       ['모델','模型'], ['구조화','结构化'], ['기반으로','基于'], ['생성합니다','生成'], ['호출하지 않았습니다','未调用'], ['설명','说明'], ['근거','依据'],
       ['격리','隔离'], ['긴급도','紧迫度'], ['단조성','顺序验证'], ['과잉 경고 방지','避免过度警告'], ['감지','检测'], ['파싱','解析'], ['중국어','中文'], ['한국어','韩文']
     ];
-    replacements.sort((a,b) => b[0].length - a[0].length);
-    for (const [from, to] of replacements) out = out.split(from).join(to);
-    out = out
-      .replace(/(\d+)개/g, '$1项')
-      .replace(/(\d+)건/g, '$1项')
-      .replace(/(\d+)종/g, '$1类')
-      .replace(/(\d+)분/g, '$1分钟');
+    if (lang === 'zh') {
+      replacements.sort((a,b) => b[0].length - a[0].length);
+      for (const [ko, zh] of replacements) out = out.split(ko).join(zh);
+      out = out
+        .replace(/(\d+)개/g, '$1项')
+        .replace(/(\d+)건/g, '$1项')
+        .replace(/(\d+)종/g, '$1类')
+        .replace(/(\d+)분/g, '$1分钟')
+        // Absolute language guard: unknown legacy Korean database text must not leak into Chinese mode.
+        .replace(/[가-힣]+/g, '历史内容');
+    } else {
+      replacements.sort((a,b) => b[1].length - a[1].length);
+      for (const [ko, zh] of replacements) out = out.split(zh).join(ko);
+      // Symmetric guard for old Chinese records while Korean mode is active.
+      out = out.replace(/[\u4e00-\u9fff]+/g, '저장된 내용');
+    }
     return out;
   };
+
+  const localizeDeep = (value) => {
+    if (value == null) return value;
+    if (typeof value === 'string') return T(value);
+    if (Array.isArray(value)) return value.map(localizeDeep);
+    if (typeof value === 'object') return Object.fromEntries(Object.entries(value).map(([k,v]) => [k, localizeDeep(v)]));
+    return value;
+  };
+
   const evaluationLabels = {
     '겹치는 일정 감지': {zh:'检测日程冲突', en:'Detect overlapping schedules'},
     '비충돌 일정 과잉 경고 방지': {zh:'避免无冲突日程的过度警告', en:'Avoid false conflict warnings'},
@@ -227,10 +245,11 @@ export default function Home() {
         fetch(`${API}/health`).then(r => r.json()),
         fetch(`${API}/capabilities`).then(r => r.json()).catch(() => null),
       ]);
-      setData(d);
+      const localized = localizeDeep(d);
+      setData(localized);
       setMode(h.mode || 'demo');
       if (c) setCapabilities(c);
-      return d;
+      return localized;
     } catch {
       return null;
     }
@@ -253,6 +272,11 @@ export default function Home() {
     setLastDecision(current => T(current));
     setReply(current => T(current));
     setTrace(current => current.map(x => ({...x, title:T(x.title), detail:T(x.detail)})));
+    setDailyPlan(current => localizeDeep(current));
+    setDecisionResult(current => localizeDeep(current));
+    setEvaluation(current => localizeDeep(current));
+    setVisionResult(current => localizeDeep(current));
+    setData(current => localizeDeep(current));
     setDecisionInput(current => ({...current, title: lang === 'zh' ? '去医院' : '병원 가기', proposed_at: lang === 'zh' ? '明天 15:00' : '내일 15:00'}));
     setManageForm(current => ({
       ...current,
@@ -308,7 +332,7 @@ export default function Home() {
       const r = await authorizedFetch(`${API}/agent`, {
         method: 'POST',
         headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({message: actual})
+        body: JSON.stringify({message: actual, lang})
       });
       if (!r.ok) throw new Error('agent');
       const j = await r.json();
@@ -334,7 +358,7 @@ export default function Home() {
       const r = await authorizedFetch(`${API}/agent/confirm`, {
         method:'POST',
         headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({action_id: pending.id, approve})
+        body:JSON.stringify({action_id: pending.id, approve, lang})
       });
       if (!r.ok) throw new Error('confirm');
       const j = await r.json();
@@ -379,10 +403,10 @@ export default function Home() {
       const r = await authorizedFetch(`${API}/planner/daily`, {
         method:'POST',
         headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({horizon:'tomorrow'})
+        body:JSON.stringify({horizon:'tomorrow', lang})
       });
       if (!r.ok) throw new Error('planner');
-      const j = await r.json();
+      const j = localizeDeep(await r.json());
       setDailyPlan(j);
       setTrace(j.trace || []);
       setReply(T(j.summary) || L('통합 생활 계획이 생성되었습니다.','综合生活计划已生成。'));
@@ -405,10 +429,10 @@ export default function Home() {
       const r = await authorizedFetch(`${API}/reasoning/analyze`, {
         method:'POST',
         headers:{'Content-Type':'application/json'},
-        body:JSON.stringify(decisionInput)
+        body:JSON.stringify({...decisionInput, lang})
       });
       if (!r.ok) throw new Error('reasoning');
-      const j = await r.json();
+      const j = localizeDeep(await r.json());
       setDecisionResult(j);
       setTrace(j.trace || []);
       setReply(T(j.recommendation) || L('로컬 의사결정 분석이 완료되었습니다.','本地决策分析已完成。'));
@@ -432,7 +456,7 @@ export default function Home() {
     try {
       const r = await authorizedFetch(`${API}/vision/${visionKind}`, {method:'POST', body:fd});
       if (!r.ok) throw new Error('vision');
-      setVisionResult(await r.json());
+      setVisionResult(localizeDeep(await r.json()));
     } catch { setVisionError(L('이미지 분석에 실패했습니다. 백엔드 실행 상태를 확인해 주세요.','图片分析失败，请检查后端运行状态。')); }
     setVisionBusy(false);
   }
@@ -462,7 +486,7 @@ export default function Home() {
     try {
       const r = await authorizedFetch(`${API}/evaluation/run`, {method:'POST'});
       if (!r.ok) throw new Error('evaluation');
-      const j = await r.json();
+      const j = localizeDeep(await r.json());
       setEvaluation(j);
       setReply(lang === 'zh'
         ? `评估完成：${j.tests_passed}/${j.tests_total} 通过 · Pass Rate ${Math.round(Number(j.pass_rate||0)*100)}%`
@@ -485,7 +509,7 @@ export default function Home() {
     try {
       await authorizedFetch(`${API}/demo/seed`, {method:'POST'});
       const er = await authorizedFetch(`${API}/evaluation/run`, {method:'POST'});
-      const ej = await er.json();
+      const ej = localizeDeep(await er.json());
       setEvaluation(ej);
       const sr = await authorizedFetch(`${API}/defense/summary`);
       const sj = await sr.json();
