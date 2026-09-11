@@ -75,6 +75,94 @@ export default function Home() {
   const [lang, setLang] = useState('ko');
   const quickPrompts = lang === 'zh' ? quickPromptsZh : quickPromptsKo;
   const L = (ko, zh) => lang === 'zh' ? zh : ko;
+
+  // Backend demo/rule-engine payloads are intentionally language-neutral at the API boundary,
+  // but older v1.2 responses contain Korean explanatory text. In Chinese UI mode every
+  // backend-originated display string is normalized here so interaction results never leak Korean.
+  const T = (value) => {
+    if (value === null || value === undefined) return '';
+    if (lang !== 'zh' || typeof value !== 'string') return value;
+    let out = value;
+    const replacements = [
+      ['개인 생활 Context를 읽고 일정, 지출, 할 일, 식재료 작업을 처리할 수 있습니다. “내일 일정을 계획해 줘” 또는 “오늘 커피에 4,500원을 썼어”를 시도해 보세요.','可以读取个人生活 Context，并处理日程、支出、待办和食材操作。可以尝试“帮我安排明天”或“今天咖啡花了4500韩元”。'],
+      ['개인 생활 Context를 바탕으로 계획을 구성했습니다.','已根据个人生活 Context 生成计划。'], ['현재 일정:','当前日程：'], ['제안:','建议：'],
+      ['고정 일정을 우선 유지하고 빈 시간에 우선순위가 높은 할 일을 배치하며 휴식 시간을 확보하세요.','优先保留固定日程，把高优先级待办安排到空闲时间，并预留休息时间。'],
+      ['이 지출을 기록할 준비가 되었습니다:','已准备记录这笔支出：'], ['확인 후 데이터베이스에 저장됩니다.','确认后将保存到数据库。'],
+      ['지출 기록 요청으로 인식했지만 명확한 금액을 찾지 못했습니다. 금액을 입력해 주세요.','已识别为支出记录请求，但未找到明确金额。请输入金额。'],
+      ['일정 생성 준비:','已准备创建日程：'], ['고정 일정 없음','暂无固定日程'], ['할 일 없음','暂无待办'], ['선호 없음','暂无偏好'],
+      ['유효기간이 기록된 식재료가 없습니다','没有记录有效期的食材'], ['냉장고 Context를 읽었습니다:','已读取冰箱 Context：'], ['확인된 이미지 인식 결과는 통합 생활 계획에 반영됩니다.','已确认的图片识别结果会纳入综合生活计划。'],
+      ['확인 필요 / TBD','需要确认 / TBD'], ['Agent 식재료 저장','Agent 保存食材'], ['Agent 확인 실행','Agent 确认执行'],
+      ['Agent 요청 대기','等待 Agent 请求'], ['컴퓨터공학 수업','计算机工程课程'], ['졸업작품 회의','毕业设计会议'], ['졸업작품 요구사항 정리','整理毕业设计需求'],
+      ['Python 복습','Python 复习'], ['병원 가기','去医院'], ['커피','咖啡'], ['편의점','便利店'], ['달걀','鸡蛋'], ['우유','牛奶'], ['토마토','番茄'],
+      ['식비','餐饮'], ['생활','生活'], ['6개','6个'], ['1팩','1盒'], ['3개','3个'], ['3일 후','3天后'], ['4일 후','4天后'], ['2일 후','2天后'],
+      ['내일','明天'], ['오늘','今天'], ['이번 주','本周'], ['고정','固定'], ['빈 시간 1','空闲时间 1'], ['빈 시간','空闲时间'],
+      ['첫 집중 블록 설정','设置首个专注时段'], ['기존 일정','已有日程'], ['우선순위 높은 할 일','高优先级待办'],
+      ['유통기한 임박 식재료 우선 사용','优先使用临期食材'], ['보유 식재료로 한 끼 해결','使用现有食材安排一餐'],
+      ['지출 의사결정','支出决策'], ['보유 자원을 우선 활용해 불필요한 즉흥 지출을 줄이기','优先利用现有资源，减少不必要的临时支出'],
+      ['실행 규칙','执行规则'], ['개인 선호에 맞춰 집중과 마무리 배치','根据个人偏好安排专注与收尾'],
+      ['Personal Context를 보강한 뒤 정교한 계획 생성','补充 Personal Context 后生成更精确的计划'],
+      ['Schedule Context:','Schedule Context：'], ['고정 약속을 우선 유지합니다.','优先保留固定安排。'],
+      ['고정 일정이 없어 우선순위가 높은 할 일을 위한 집중 시간을 먼저 확보합니다.','当前没有固定日程，先为高优先级待办预留专注时间。'],
+      ['우선순위','优先级'], ['마감','截止时间'], ['미설정','未设置'],
+      ['Ingredient Context에 유효기간이 기록된 식재료가 있어 먼저 사용하면 낭비를 줄일 수 있습니다.','Ingredient Context 中存在记录了有效期的食材，优先使用可以减少浪费。'],
+      ['냉장고 Context를 활용해 추가 구매를 줄이고 실제 재고에 맞춰 식사를 제안합니다.','利用冰箱 Context 减少额外购买，并根据实际库存给出餐食建议。'],
+      ['Expense Context 누적 기록은','Expense Context 累计记录为'], ['입니다. 이 규칙은 알림만 제공하며 사용자의 예산을 대신 정하지 않습니다.','。该规则只提供提醒，不替用户决定预算。'],
+      ['구조화 생활 데이터가 부족하여 존재하지 않는 일정, 예산, 재고를 만들어내지 않습니다.','结构化生活数据不足，因此不会虚构不存在的日程、预算或库存。'],
+      ['일정','日程'], ['할 일','待办'], ['식재료','食材'], ['지출','支出'], ['선호','偏好'],
+      ['고정 일정을 우선하고 우선순위가 높은 할 일을 빈 시간에 배치해 모든 작업이 한곳에 몰리지 않도록 합니다.','优先保留固定日程，并把高优先级待办安排到空闲时间，避免所有任务集中在同一时段。'],
+      ['유통기한 임박 식재료를 감지하여 식사 제안에 재고를 우선 활용합니다.','检测临期食材，并在餐食建议中优先利用现有库存。'],
+      ['일반 템플릿 대신 개인 선호를 실행 제약으로 사용합니다.','不使用通用模板，而是把个人偏好作为执行约束。'],
+      ['현재 Context가 적어 보수적으로 계획하며 추가 사실을 만들어내지 않습니다.','当前 Context 较少，因此采用保守规划，不额外虚构事实。'],
+      ['5개 Personal Context 통합','整合 5 类 Personal Context'], ['사용 Context','使用的 Context'], ['구조화 데이터 없음','无结构化数据'],
+      ['교차 도메인 제약 정렬','跨域约束排序'], ['고정 일정을 먼저 유지하고 우선순위가 높은 할 일을 배치하며 식재료, 지출, 선호를 함께 고려합니다.','先保留固定日程，再安排高优先级待办，并同时考虑食材、支出和偏好。'],
+      ['읽기 전용 계획','只读计划'], ['이번 계획은 데이터베이스를 직접 수정하지 않습니다.','本次计划不会直接修改数据库。'],
+      ['설명 가능한 계획 생성','生成可解释计划'], ['개의 계획 노드를 출력했으며 각 노드에 이유와 Context 신호가 포함됩니다.','个计划节点，每个节点都包含原因与 Context 信号。'],
+      ['개 Personal Context를 바탕으로 통합 생활 계획을 생성했습니다.','类 Personal Context 生成了综合生活计划。'],
+      ['충돌 회피','避免冲突'], ['우선순위 정렬','优先级排序'], ['임박 식재료 우선','临期食材优先'], ['재고 활용','利用库存'], ['보수적 지출 제안','保守支出建议'], ['개인화','个性化'], ['저 Context 모드','低 Context 模式'],
+      ['후보 계획 읽기','读取候选计划'], ['제약 조건 로드','加载约束条件'], ['시간 충돌 감지','检测时间冲突'], ['할 일 우선순위 점수','待办优先级评分'], ['읽기 전용 유지','保持只读'], ['조정안 생성','生成调整方案'],
+      ['고정 일정','固定日程'], ['충돌','冲突'], ['위험 점수','风险分数'], ['미완료','未完成'], ['개의 우선순위 점수를 계산했습니다','项优先级分数已计算'],
+['분 앞당겨 현재 충돌 구간 회피','分钟前移，避开当前冲突时段'], ['분 늦춰 기존 고정 일정 유지','分钟后移，保留已有固定日程'],
+      ['현재 시간대에 고정 일정 충돌이 감지되지 않음','当前时段未检测到固定日程冲突'],
+      ['시간 충돌','时间冲突'], ['건을 감지했습니다. 기존 고정 일정을 유지하고','项。建议保留已有固定日程，并调整'], ['시간을 조정하는 것을 권장합니다. 시스템은 일정을 자동 수정하지 않습니다.','的时间。系统不会自动修改日程。'],
+      ['명확한 시간을 해석하지 못했습니다.','无法解析明确时间。'], ['형식으로 입력해 주세요.','格式输入。'],
+      ['현재 알려진 고정 일정과 충돌하지 않아 후보 계획으로 사용할 수 있습니다. 일정 저장 전 사용자 확인을 권장합니다.','与当前已知固定日程不冲突，可以作为候选计划。保存日程前建议由用户确认。'],
+      ['분석은 제안만 생성하며 Schedule / Task 데이터베이스를 수정하지 않습니다.','分析只生成建议，不会修改 Schedule / Task 数据库。'],
+      ['사용자 요청 이해','理解用户请求'], ['Personal Context 읽기','读取 Personal Context'], ['교차 모듈 계획','跨模块规划'],
+      ['일정, 할 일, 개인 선호를 종합해 제안하며 사용자 데이터를 직접 수정하지 않습니다','综合日程、待办和个人偏好给出建议，不直接修改用户数据'],
+      ['개인화 계획 생성','生成个性化计划'], ['읽기 전용 계획 생성 완료 · 쓰기 작업 없음','只读计划已生成 · 无写入操作'],
+      ['의도 판단','意图判断'], ['지출 기록 작업으로 인식','识别为支出记录操作'], ['정보 완전성 검사','信息完整性检查'], ['금액이 없어 작업을 생성하지 않음','缺少金额，未创建操作'],
+      ['Tool 호출 준비','准备调用 Tool'], ['데이터베이스 쓰기 전 사용자 확인 대기','数据库写入前等待用户确认'],
+      ['일정 생성 작업으로 인식','识别为创建日程操作'], ['일정 변경 전 사용자 확인 대기','修改日程前等待用户确认'],
+      ['식사·식재료 작업으로 인식','识别为餐食/食材操作'], ['식재료 Context 읽기','读取食材 Context'], ['일반 생활 도우미','通用生活助手'], ['쓰기 작업이 필요한 명확한 의도를 감지하지 못함','未检测到需要写入操作的明确意图'],
+      ['Agent 의사결정','Agent 决策'], ['일정 생성 필요','需要创建日程'], ['지출 기록 필요','需要记录支出'], ['Tool 준비','准备 Tool'], ['확인 대기','等待确认'], ['응답 생성','生成响应'], ['Personal Context 기반 결과 반환','返回基于 Personal Context 的结果'],
+      ['작업을 취소했습니다. 생활 데이터는 변경되지 않았습니다.','操作已取消，生活数据未发生变化。'], ['확인 후 실행했습니다. Personal Context가 업데이트되었습니다.','确认后已执行，Personal Context 已更新。'],
+      ['이미지 인식 지출 기록','图像识别支出记录'], ['인식된 식재료','识别到的食材'], ['종을 냉장고 Context에 저장','类保存到冰箱 Context'],
+      ['일정 생성','创建日程'], ['지출 기록','记录支出'], ['식재료 추가','添加食材'], ['할 일 생성','创建待办'], ['선호 설정','设置偏好'], ['일정 수정','修改日程'], ['일정 삭제','删除日程'], ['할 일 업데이트','更新待办'], ['할 일 삭제','删除待办'], ['지출 수정','修改支出'], ['지출 삭제','删除支出'], ['식재료 수정','修改食材'], ['식재료 삭제','删除食材'], ['실행 취소','撤销操作'],
+      ['50분 집중 + 10분 휴식 선호','偏好 50 分钟专注 + 10 分钟休息'], ['23:30 이전에 고강도 작업 종료','23:30 前结束高强度任务'],
+      ['내일 10:00','明天 10:00'], ['내일 15:30','明天 15:30'], ['내일 15:00','明天 15:00'], ['내일 09:00','明天 09:00'],
+      ['겹치는 일정 감지','检测日程冲突'], ['비충돌 일정 과잉 경고 방지','避免无冲突日程的过度警告'], ['한국어·중국어 오후 시간 파싱','中韩下午时间解析'],
+      ['할 일 우선순위 단조성','待办优先级顺序验证'], ['마감 긴급도','截止时间紧迫度验证'], ['5개 Context 커버리지','5类 Context 覆盖率'],
+      ['계획 노드 설명 근거','计划节点依据验证'], ['계획 읽기 전용 유지','保持计划只读'], ['현재 사용자 Context 격리','当前用户 Context 隔离'],
+      ['확인 대기 작업 사용자 격리','待确认操作的用户隔离'], ['이 결과는 로컬 재현 가능 테스트에서 나온 것이며 범용 대규모 모델 벤치마크 점수를 의미하지 않습니다.','该结果来自本地可重复测试，并不代表通用大模型基准测试得分。'],
+      ['LLM 교차 도메인 계획','LLM 跨域规划'], ['모델은 구조화 Context만 기반으로 읽기 전용 계획을 생성합니다.','模型仅基于结构化 Context 生成只读计划。'],
+      ['쓰기 Tool을 호출하지 않았습니다.','未调用写入 Tool。'], ['개의 계획 노드를 출력했습니다.','个计划节点已生成。'],
+      ['명확한 시간을 해석하지 못했습니다. “내일 15:00” 또는 “내일 오후 3시” 형식으로 입력해 주세요.','无法解析明确时间。请输入“明天 15:00”或“明天下午3点”之类的时间。'],
+      ['저녁 학습','晚间学习'], ['내일 계획','明日计划'], ['내일 일정 정리','整理明日日程'], ['영수증','小票'], ['냉장고','冰箱'], ['재료','食材'], ['레시피','食谱'],
+      ['확인 후 실행합니다.','确认后执行。'], ['지출 기록 준비','准备记录支出'], ['직접 수정하지','不会直接修改'], ['오후','下午'], ['저녁','晚上'],
+      ['”은 ','”'], ['원','韩元'], ['계획','计划'], ['사용자','用户'], ['현재','当前'], ['작업','操作'], ['결과','结果'], ['로컬','本地'], ['테스트','测试'],
+      ['재현 가능','可重复'], ['범용','通用'], ['대규모 모델','大模型'], ['벤치마크','基准测试'], ['점수','分数'], ['의미하지 않습니다','并不代表'],
+      ['모델','模型'], ['구조화','结构化'], ['기반으로','基于'], ['생성합니다','生成'], ['호출하지 않았습니다','未调用'], ['설명','说明'], ['근거','依据'],
+      ['격리','隔离'], ['긴급도','紧迫度'], ['단조성','顺序验证'], ['과잉 경고 방지','避免过度警告'], ['감지','检测'], ['파싱','解析'], ['중국어','中文'], ['한국어','韩文']
+    ];
+    replacements.sort((a,b) => b[0].length - a[0].length);
+    for (const [from, to] of replacements) out = out.split(from).join(to);
+    out = out
+      .replace(/(\d+)개/g, '$1项')
+      .replace(/(\d+)건/g, '$1项')
+      .replace(/(\d+)종/g, '$1类')
+      .replace(/(\d+)분/g, '$1分钟');
+    return out;
+  };
   const evaluationLabels = {
     '겹치는 일정 감지': {zh:'检测日程冲突', en:'Detect overlapping schedules'},
     '비충돌 일정 과잉 경고 방지': {zh:'避免无冲突日程的过度警告', en:'Avoid false conflict warnings'},
@@ -162,7 +250,16 @@ export default function Home() {
   useEffect(() => { if (token && user) refresh(); }, [token, user]);
   useEffect(() => {
     setMessage(current => (current === quickPromptsKo[0] || current === quickPromptsZh[0]) ? (lang === 'zh' ? quickPromptsZh[0] : quickPromptsKo[0]) : current);
+    setLastDecision(current => T(current));
+    setReply(current => T(current));
+    setTrace(current => current.map(x => ({...x, title:T(x.title), detail:T(x.detail)})));
     setDecisionInput(current => ({...current, title: lang === 'zh' ? '去医院' : '병원 가기', proposed_at: lang === 'zh' ? '明天 15:00' : '내일 15:00'}));
+    setManageForm(current => ({
+      ...current,
+      scheduled_at: ['내일 09:00','明天 09:00'].includes(current.scheduled_at) ? (lang === 'zh' ? '明天 09:00' : '내일 09:00') : current.scheduled_at,
+      due_at: ['이번 주','本周'].includes(current.due_at) ? (lang === 'zh' ? '本周' : '이번 주') : current.due_at,
+      category: ['생활','生活'].includes(current.category) ? (lang === 'zh' ? '生活' : '생활') : current.category,
+    }));
   }, [lang]);
 
 
@@ -215,8 +312,8 @@ export default function Home() {
       });
       if (!r.ok) throw new Error('agent');
       const j = await r.json();
-      setReply(j.message || '');
-      setTrace(j.trace || []);
+      setReply(T(j.message || ''));
+      setTrace((j.trace || []).map(x => ({...x, title:T(x.title), detail:T(x.detail)})));
       setPending(j.pending_action || null);
       setLastDecision(j.pending_action ? L('사용자 확인 대기 · Awaiting confirmation','等待用户确认 · Awaiting confirmation') : L('읽기 전용 응답 · 데이터 변경 없음 · Read only','只读响应 · 数据未修改 · Read only'));
       const d = await refresh();
@@ -241,7 +338,7 @@ export default function Home() {
       });
       if (!r.ok) throw new Error('confirm');
       const j = await r.json();
-      setReply(j.message || L('작업 완료','操作完成'));
+      setReply(T(j.message) || L('작업 완료','操作完成'));
       setTrace(t => [...t, {
         stage:'execution',
         title: approve ? L('Tool 실행','Tool 执行') : L('실행 거부','拒绝执行'),
@@ -263,7 +360,7 @@ export default function Home() {
     setBusy(true);
     try {
       await authorizedFetch(`${API}/demo/seed`, {method:'POST'});
-      setReply('데모 데이터를 불러왔습니다. 이제 “내일 일정을 계획해 줘”를 실행하면 Context-aware 계획을 확인할 수 있습니다.');
+      setReply(L('데모 데이터를 불러왔습니다. 이제 “내일 일정을 계획해 줘”를 실행하면 Context-aware 계획을 확인할 수 있습니다.','演示数据已加载。现在运行“帮我安排明天”，即可查看 Context-aware 计划。'));
       setTrace([]);
       setPending(null);
       setBeforeContext(null);
@@ -271,13 +368,13 @@ export default function Home() {
       setLastDecision(L('데모 데이터 로드 완료','演示数据加载完成'));
       await refresh();
     } catch {
-      setReply('데모 데이터 로드에 실패했습니다. 백엔드 실행 상태를 확인해 주세요.');
+      setReply(L('데모 데이터 로드에 실패했습니다. 백엔드 실행 상태를 확인해 주세요.','演示数据加载失败，请检查后端运行状态。'));
     } finally { setBusy(false); }
   }
 
   async function generateDailyPlan() {
     setPlannerBusy(true);
-    setLastDecision('교차 도메인 생활 계획 생성 중');
+    setLastDecision(L('교차 도메인 생활 계획 생성 중','正在生成跨域生活计划'));
     try {
       const r = await authorizedFetch(`${API}/planner/daily`, {
         method:'POST',
@@ -288,13 +385,13 @@ export default function Home() {
       const j = await r.json();
       setDailyPlan(j);
       setTrace(j.trace || []);
-      setReply(j.summary || '통합 생활 계획이 생성되었습니다.');
+      setReply(T(j.summary) || L('통합 생활 계획이 생성되었습니다.','综合生活计划已生成。'));
       setPending(null);
       setBeforeContext(snapshot(data));
       setAfterContext(snapshot(data));
-      setLastDecision('읽기 전용 통합 계획 · 데이터 변경 없음');
+      setLastDecision(L('읽기 전용 통합 계획 · 데이터 변경 없음','只读综合计划 · 数据未修改'));
     } catch {
-      setReply('통합 계획 생성에 실패했습니다. FastAPI v1.2 실행 상태를 확인해 주세요.');
+      setReply(L('통합 계획 생성에 실패했습니다. FastAPI v1.2 실행 상태를 확인해 주세요.','综合计划生成失败，请检查 FastAPI v1.2 运行状态。'));
       setLastDecision(L('계획 실패','规划失败'));
     }
     setPlannerBusy(false);
@@ -303,7 +400,7 @@ export default function Home() {
 
   async function analyzeDecision() {
     setDecisionBusy(true);
-    setLastDecision('Local Reasoning이 충돌을 분석하는 중');
+    setLastDecision(L('Local Reasoning이 충돌을 분석하는 중','Local Reasoning 正在分析冲突'));
     try {
       const r = await authorizedFetch(`${API}/reasoning/analyze`, {
         method:'POST',
@@ -314,13 +411,13 @@ export default function Home() {
       const j = await r.json();
       setDecisionResult(j);
       setTrace(j.trace || []);
-      setReply(j.recommendation || '로컬 의사결정 분석이 완료되었습니다.');
+      setReply(T(j.recommendation) || L('로컬 의사결정 분석이 완료되었습니다.','本地决策分析已完成。'));
       setPending(null);
       setBeforeContext(snapshot(data));
       setAfterContext(snapshot(data));
-      setLastDecision(`로컬 추론 완료 · 위험 ${j.risk}`);
+      setLastDecision(L(`로컬 추론 완료 · 위험 ${j.risk}`,`本地推理完成 · 风险 ${j.risk}`));
     } catch {
-      setReply('의사결정 분석에 실패했습니다. FastAPI v1.2 실행 상태를 확인해 주세요.');
+      setReply(L('의사결정 분석에 실패했습니다. FastAPI v1.2 실행 상태를 확인해 주세요.','决策分析失败，请检查 FastAPI v1.2 运行状态。'));
       setLastDecision(L('추론 실패','推理失败'));
     }
     setDecisionBusy(false);
@@ -336,7 +433,7 @@ export default function Home() {
       const r = await authorizedFetch(`${API}/vision/${visionKind}`, {method:'POST', body:fd});
       if (!r.ok) throw new Error('vision');
       setVisionResult(await r.json());
-    } catch { setVisionError('이미지 분석에 실패했습니다. 백엔드 실행 상태를 확인해 주세요.'); }
+    } catch { setVisionError(L('이미지 분석에 실패했습니다. 백엔드 실행 상태를 확인해 주세요.','图片分析失败，请检查后端运行状态。')); }
     setVisionBusy(false);
   }
 
@@ -347,15 +444,15 @@ export default function Home() {
       const r = await authorizedFetch(`${API}/vision/propose`, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({kind:visionKind,result:visionResult})});
       if (!r.ok) throw new Error('proposal');
       const j = await r.json();
-      setPending(j); setReply(j.summary + '. 확인 후 실행해 주세요.');
+      setPending(j); setReply(`${T(j.summary)}. ${L('확인 후 실행해 주세요.','请确认后执行。')}`);
       setTrace([
-        {stage:'input',title:'이미지 입력',detail:visionKind === 'receipt' ? '영수증 이미지' : '냉장고 / 식재료 이미지',status:'done'},
-        {stage:'vision',title:'멀티모달 이해',detail:`인식 소스: ${visionResult.source || 'unknown'} · confidence ${visionResult.confidence ?? '-'}`,status:'done'},
-        {stage:'tool',title:'Tool 준비',detail:j.summary,status:'done'},
-        {stage:'safety',title:'Human-in-the-loop',detail:'데이터베이스는 아직 변경되지 않았으며 사용자 확인을 기다립니다.',status:'waiting'}
+        {stage:'input',title:L('이미지 입력','图片输入'),detail:visionKind === 'receipt' ? L('영수증 이미지','小票图片') : L('냉장고 / 식재료 이미지','冰箱 / 食材图片'),status:'done'},
+        {stage:'vision',title:L('멀티모달 이해','多模态理解'),detail:`${L('인식 소스','识别来源')}: ${visionResult.source || 'unknown'} · confidence ${visionResult.confidence ?? '-'}`,status:'done'},
+        {stage:'tool',title:L('Tool 준비','准备 Tool'),detail:T(j.summary),status:'done'},
+        {stage:'safety',title:'Human-in-the-loop',detail:L('데이터베이스는 아직 변경되지 않았으며 사용자 확인을 기다립니다.','数据库尚未修改，正在等待用户确认。'),status:'waiting'}
       ]);
       setBeforeContext(snapshot(data)); setAfterContext(null); setLastDecision(L('사용자 확인 대기','等待用户确认'));
-    } catch { setVisionError('확인 대기 작업을 생성하지 못했습니다.'); }
+    } catch { setVisionError(L('확인 대기 작업을 생성하지 못했습니다.','无法创建待确认操作。')); }
     setBusy(false);
   }
 
@@ -394,10 +491,10 @@ export default function Home() {
       const sj = await sr.json();
       setDefenseSummary(sj);
       await refresh();
-      setReply('발표 시연 환경 준비 완료: 데모 데이터, 평가 지표, 시스템 요약이 생성되었습니다.');
+      setReply(L('발표 시연 환경 준비 완료: 데모 데이터, 평가 지표, 시스템 요약이 생성되었습니다.','答辩演示环境已准备完成：已生成演示数据、评估指标和系统摘要。'));
       setLastDecision('DEFENSE MODE READY');
     } catch {
-      setReply('발표 시연 모드 준비에 실패했습니다. FastAPI v1.2 실행 상태를 확인해 주세요.');
+      setReply(L('발표 시연 모드 준비에 실패했습니다. FastAPI v1.2 실행 상태를 확인해 주세요.','答辩演示模式准备失败，请检查 FastAPI v1.2 运行状态。'));
     }
     setDefenseBusy(false);
   }
@@ -422,41 +519,41 @@ export default function Home() {
   async function addContextItem() {
     setBusy(true); setManageNotice('');
     try {
-      if (manageKind === 'schedule') await apiWrite('/schedules','POST',{title:manageForm.title || '새 일정', scheduled_at:manageForm.scheduled_at || '미정'});
-      if (manageKind === 'task') await apiWrite('/tasks','POST',{title:manageForm.title || '새 할 일', priority:manageForm.priority, due_at:manageForm.due_at || null});
-      if (manageKind === 'expense') await apiWrite('/expenses','POST',{item:manageForm.item || '지출', amount:Number(manageForm.amount || 0), category:manageForm.category || 'other'});
-      if (manageKind === 'ingredient') await apiWrite('/ingredients','POST',{name:manageForm.name || '식재료', quantity:manageForm.quantity || '1', expires_on:manageForm.expires_on || null});
-      setManageNotice('Personal Context에 저장하고 작업 기록에 추가했습니다.');
+      if (manageKind === 'schedule') await apiWrite('/schedules','POST',{title:manageForm.title || L('새 일정','新日程'), scheduled_at:manageForm.scheduled_at || L('미정','未定')});
+      if (manageKind === 'task') await apiWrite('/tasks','POST',{title:manageForm.title || L('새 할 일','新待办'), priority:manageForm.priority, due_at:manageForm.due_at || null});
+      if (manageKind === 'expense') await apiWrite('/expenses','POST',{item:manageForm.item || L('지출','支出'), amount:Number(manageForm.amount || 0), category:manageForm.category || 'other'});
+      if (manageKind === 'ingredient') await apiWrite('/ingredients','POST',{name:manageForm.name || L('식재료','食材'), quantity:manageForm.quantity || '1', expires_on:manageForm.expires_on || null});
+      setManageNotice(L('Personal Context에 저장하고 작업 기록에 추가했습니다.','已保存到 Personal Context，并添加到操作记录。'));
       await refresh();
-    } catch { setManageNotice('작업에 실패했습니다. 입력값과 백엔드를 확인해 주세요.'); }
+    } catch { setManageNotice(L('작업에 실패했습니다. 입력값과 백엔드를 확인해 주세요.','操作失败，请检查输入值和后端。')); }
     setBusy(false);
   }
 
   async function removeItem(kind,id) {
-    if (!window.confirm('이 데이터를 삭제하시겠습니까? 작업 기록에서 실행 취소할 수 있습니다.')) return;
-    try { await apiWrite(`/${kind}s/${id}`,'DELETE'); setManageNotice('삭제 완료 · 작업 기록에서 실행 취소할 수 있습니다.'); await refresh(); }
-    catch { setManageNotice('삭제 실패'); }
+    if (!window.confirm(L('이 데이터를 삭제하시겠습니까? 작업 기록에서 실행 취소할 수 있습니다.','确定删除这条数据吗？可在操作记录中撤销。'))) return;
+    try { await apiWrite(`/${kind}s/${id}`,'DELETE'); setManageNotice(L('삭제 완료 · 작업 기록에서 실행 취소할 수 있습니다.','删除完成 · 可在操作记录中撤销。')); await refresh(); }
+    catch { setManageNotice(L('삭제 실패','删除失败')); }
   }
 
   async function toggleTask(x) {
-    try { await apiWrite(`/tasks/${x.id}`,'PATCH',{completed:!x.completed}); setManageNotice(x.completed?'할 일을 미완료 상태로 되돌렸습니다.':'할 일을 완료로 표시했습니다.'); await refresh(); }
-    catch { setManageNotice('할 일 상태 업데이트 실패'); }
+    try { await apiWrite(`/tasks/${x.id}`,'PATCH',{completed:!x.completed}); setManageNotice(x.completed?L('할 일을 미완료 상태로 되돌렸습니다.','已将待办恢复为未完成。'):L('할 일을 완료로 표시했습니다.','已将待办标记为完成。')); await refresh(); }
+    catch { setManageNotice(L('할 일 상태 업데이트 실패','待办状态更新失败')); }
   }
 
   async function editItem(kind,x) {
     try {
       let body={};
-      if(kind==='schedule') { const title=window.prompt('일정 제목',x.title); if(title===null)return; const t=window.prompt('시간',x.scheduled_at); if(t===null)return; body={title,scheduled_at:t}; }
-      if(kind==='task') { const title=window.prompt('할 일 제목',x.title); if(title===null)return; const priority=window.prompt('우선순위 high / medium / low',x.priority); if(priority===null)return; body={title,priority}; }
-      if(kind==='expense') { const item=window.prompt('지출 항목',x.item); if(item===null)return; const amount=window.prompt('금액',String(x.amount)); if(amount===null)return; body={item,amount:Number(amount)}; }
-      if(kind==='ingredient') { const name=window.prompt('식재료 이름',x.name); if(name===null)return; const quantity=window.prompt('수량',x.quantity); if(quantity===null)return; body={name,quantity}; }
-      await apiWrite(`/${kind}s/${x.id}`,'PATCH',body); setManageNotice('수정 완료 · 작업 기록에 저장했습니다.'); await refresh();
-    } catch { setManageNotice('수정 실패'); }
+      if(kind==='schedule') { const title=window.prompt(L('일정 제목','日程标题'),x.title); if(title===null)return; const t=window.prompt(L('시간','时间'),T(x.scheduled_at)); if(t===null)return; body={title,scheduled_at:t}; }
+      if(kind==='task') { const title=window.prompt(L('할 일 제목','待办标题'),x.title); if(title===null)return; const priority=window.prompt(L('우선순위 high / medium / low','优先级 high / medium / low'),x.priority); if(priority===null)return; body={title,priority}; }
+      if(kind==='expense') { const item=window.prompt(L('지출 항목','支出项目'),x.item); if(item===null)return; const amount=window.prompt(L('금액','金额'),String(x.amount)); if(amount===null)return; body={item,amount:Number(amount)}; }
+      if(kind==='ingredient') { const name=window.prompt(L('식재료 이름','食材名称'),x.name); if(name===null)return; const quantity=window.prompt(L('수량','数量'),x.quantity); if(quantity===null)return; body={name,quantity}; }
+      await apiWrite(`/${kind}s/${x.id}`,'PATCH',body); setManageNotice(L('수정 완료 · 작업 기록에 저장했습니다.','修改完成 · 已保存到操作记录。')); await refresh();
+    } catch { setManageNotice(L('수정 실패','修改失败')); }
   }
 
   async function undoHistory(id) {
-    try { const j=await apiWrite(`/history/${id}/undo`,'POST'); setManageNotice(j.message || '실행 취소 완료'); await refresh(); }
-    catch { setManageNotice('실행 취소에 실패했습니다. 이미 취소되었거나 데이터가 변경되었을 수 있습니다.'); }
+    try { const j=await apiWrite(`/history/${id}/undo`,'POST'); setManageNotice(T(j.message) || L('실행 취소 완료','撤销完成')); await refresh(); }
+    catch { setManageNotice(L('실행 취소에 실패했습니다. 이미 취소되었거나 데이터가 변경되었을 수 있습니다.','撤销失败。该操作可能已撤销，或数据已发生变化。')); }
   }
 
   const expiring = useMemo(() => data.ingredients.filter(x => x.expires_on).slice(0, 4), [data.ingredients]);
@@ -527,16 +624,16 @@ export default function Home() {
         </div>
       </div>
       <div className="agentPanel">
-        <div className="panelTitle"><label>{L('Life Agent에게 목표를 입력하세요','给 Life Agent 一个目标')}</label><span>{lastDecision}</span></div>
+        <div className="panelTitle"><label>{L('Life Agent에게 목표를 입력하세요','给 Life Agent 一个目标')}</label><span>{T(lastDecision)}</span></div>
         <textarea value={message} onChange={e => setMessage(e.target.value)} placeholder={L('예: 오늘 커피에 4,500원을 썼어','例如：今天咖啡花了4500韩元')} />
         <div className="agentActionRow">
           <button className={`voiceButton ${listening ? 'listening' : ''}`} onClick={startVoiceInput} disabled={busy || listening}>{listening ? L('🎙 듣는 중…','🎙 正在聆听…') : L('🎙 음성 입력','🎙 语音输入')}</button>
           <button className="primary" onClick={() => send()} disabled={busy}>{busy ? L('Agent 처리 중…','Agent 处理中…') : L('Agent 실행','运行 Agent')}</button>
         </div>
         {voiceNote && <div className={`voiceNote ${voiceSupported ? '' : 'unsupported'}`}>{voiceNote}</div>}
-        {reply && <div className="reply">{reply.split('\n').map((x,i)=><span key={i}>{x || <br/>}</span>)}</div>}
+        {reply && <div className="reply">{T(reply).split('\n').map((x,i)=><span key={i}>{x || <br/>}</span>)}</div>}
         {pending && <div className="approval">
-          <div><b>{L('사용자 확인 필요','需要用户确认')}</b><small>{pending.summary}</small><em>{L('아직 데이터베이스에 쓰지 않았습니다','尚未写入数据库')}</em></div>
+          <div><b>{L('사용자 확인 필요','需要用户确认')}</b><small>{T(pending.summary)}</small><em>{L('아직 데이터베이스에 쓰지 않았습니다','尚未写入数据库')}</em></div>
           <div className="approvalBtns"><button onClick={() => confirm(false)} disabled={busy}>{L('거부','拒绝')}</button><button className="approve" onClick={() => confirm(true)} disabled={busy}>{L('확인 후 실행','确认执行')}</button></div>
         </div>}
       </div>
@@ -573,17 +670,17 @@ export default function Home() {
       </div>
       {dailyPlan ? <>
         <div className="plannerMeta">
-          <div><span>CONTEXT COVERAGE</span><strong>{Math.round(Number(dailyPlan.coverage || 0) * 100)}%</strong><small>{(dailyPlan.context_domains || []).join(' · ') || L('저 Context 모드','低 Context 模式')} · CONTEXT</small></div>
+          <div><span>CONTEXT COVERAGE</span><strong>{Math.round(Number(dailyPlan.coverage || 0) * 100)}%</strong><small>{(dailyPlan.context_domains || []).map(T).join(' · ') || L('저 Context 모드','低 Context 模式')} · CONTEXT</small></div>
           <div><span>PLANNER SOURCE</span><strong>{dailyPlan.source === 'openai' ? 'LLM' : 'RULE + DEMO'}</strong><small>{L('읽기 전용 계획 · 쓰기 Tool 미호출','只读计划 · 未调用写入 Tool')} · READ ONLY</small></div>
           <div><span>PLAN NODES</span><strong>{dailyPlan.items?.length || 0}</strong><small>{L('각 노드에 설명 가능한 근거 포함','每个节点包含可解释依据')} · EXPLAINABLE</small></div>
         </div>
         <div className="timeline">
           {(dailyPlan.items || []).map((x,i)=><div className="planNode" key={`${x.title}-${i}`}>
-            <div className="planTime">{x.time || L('제안','建议')}</div>
-            <div className="planBody"><div className="planTitle"><b>{x.title}</b><span>{x.type || 'plan'}</span></div><p>{x.reason}</p><div className="signals">{(x.signals || []).map(s=><em key={s}>{s}</em>)}</div></div>
+            <div className="planTime">{T(x.time) || L('제안','建议')}</div>
+            <div className="planBody"><div className="planTitle"><b>{T(x.title)}</b><span>{x.type || 'plan'}</span></div><p>{T(x.reason)}</p><div className="signals">{(x.signals || []).map(s=><em key={s}>{T(s)}</em>)}</div></div>
           </div>)}
         </div>
-        <div className="plannerInsights"><span>WHY THIS PLAN</span>{(dailyPlan.insights || []).map((x,i)=><p key={i}>✓ {x}</p>)}</div>
+        <div className="plannerInsights"><span>WHY THIS PLAN</span>{(dailyPlan.insights || []).map((x,i)=><p key={i}>✓ {T(x)}</p>)}</div>
       </> : <div className="emptyTrace compact">{L('데모 데이터를 불러온 뒤 “내일 통합 계획 생성”을 클릭하세요. v1.2는 일정, 할 일, 식재료, 지출, 선호를 한 번의 계획에 반영하고 각 결정의 Context 근거를 표시합니다.','加载演示数据后点击“生成明日综合计划”。v1.2 会在一次规划中综合日程、待办、食材、支出和偏好，并显示每个决策的 Context 依据。')}</div>}
     </section>
 
@@ -605,11 +702,11 @@ export default function Home() {
       {decisionResult ? <div className="decisionResult">
         <div className="riskPanel"><span>CONFLICT RISK</span><strong className={`risk ${decisionResult.risk?.toLowerCase()}`}>{decisionResult.risk}</strong><b>{decisionResult.risk_score}/100</b><small>{decisionResult.source}</small></div>
         <div className="reasoningDetails">
-          <div><span>{L('충돌 감지','冲突检测')} · CONFLICTS</span>{decisionResult.conflicts?.length ? decisionResult.conflicts.map((x,i)=><p className="conflict" key={i}><b>⚠ {x.title}</b><small>{x.scheduled_at} · {L('약','约')} {x.overlap_minutes}{L('분 중복','分钟重叠')} · {x.severity}</small></p>) : <p className="safe"><b>✓ {L('고정 일정 충돌 없음','无固定日程冲突')} · NO FIXED CONFLICT</b><small>{L('후보 시간을 다음 확인 단계로 진행할 수 있습니다.','候选时间可以进入下一确认步骤。')}</small></p>}</div>
-          <div><span>{L('동적 조정안','动态调整方案')} · ALTERNATIVES</span>{(decisionResult.alternatives||[]).map((x,i)=><p key={i}><b>{x.time}</b><small>{x.reason}</small></p>)}</div>
-          <div><span>Task Priority Score</span>{(decisionResult.task_scores||[]).map((x,i)=><p key={i}><b>{x.score} · {x.title}</b><small>{x.priority || 'medium'} · {x.due_at || L('마감 시간 없음','未设置截止时间')}</small></p>)}</div>
+          <div><span>{L('충돌 감지','冲突检测')} · CONFLICTS</span>{decisionResult.conflicts?.length ? decisionResult.conflicts.map((x,i)=><p className="conflict" key={i}><b>⚠ {T(x.title)}</b><small>{T(x.scheduled_at)} · {L('약','约')} {x.overlap_minutes}{L('분 중복','分钟重叠')} · {x.severity}</small></p>) : <p className="safe"><b>✓ {L('고정 일정 충돌 없음','无固定日程冲突')} · NO FIXED CONFLICT</b><small>{L('후보 시간을 다음 확인 단계로 진행할 수 있습니다.','候选时间可以进入下一确认步骤。')}</small></p>}</div>
+          <div><span>{L('동적 조정안','动态调整方案')} · ALTERNATIVES</span>{(decisionResult.alternatives||[]).map((x,i)=><p key={i}><b>{T(x.time)}</b><small>{T(x.reason)}</small></p>)}</div>
+          <div><span>Task Priority Score</span>{(decisionResult.task_scores||[]).map((x,i)=><p key={i}><b>{x.score} · {T(x.title)}</b><small>{x.priority || 'medium'} · {T(x.due_at) || L('마감 시간 없음','未设置截止时间')}</small></p>)}</div>
         </div>
-        <div className="recommendation"><span>DECISION EXPLANATION</span><p>{decisionResult.recommendation}</p></div>
+        <div className="recommendation"><span>DECISION EXPLANATION</span><p>{T(decisionResult.recommendation)}</p></div>
       </div> : <div className="emptyTrace compact">{L('먼저 데모 데이터를 불러온 뒤 “병원 가기 / 내일 15:00 / 60분” 상태로 분석하세요. 데모 데이터의 15:30 졸업작품 회의와 겹치므로 HIGH 충돌이 감지되어야 합니다.','先加载演示数据，再以“去医院 / 明天 15:00 / 60分钟”进行分析。因为与演示数据中的 15:30 毕业设计会议重叠，应该检测到 HIGH 冲突。')}</div>}
     </section>
 
@@ -630,8 +727,8 @@ export default function Home() {
               <label><small>{L('금액','金额')} · AMOUNT KRW</small><input type="number" value={visionResult.amount || 0} onChange={e=>setVisionResult({...visionResult,amount:Number(e.target.value||0)})}/></label>
               <label><small>{L('카테고리','类别')} · CATEGORY</small><input value={visionResult.category || ''} onChange={e=>setVisionResult({...visionResult,category:e.target.value})}/></label>
               <div className="sourceBox"><small>{L('소스','来源')} · SOURCE</small><b>{visionResult.source || '-'}</b><em>confidence {visionResult.confidence ?? '-'}</em></div>
-            </div> : <div className="ingredientPreview">{(visionResult.ingredients||[]).map((x,i)=><div key={i}><b>{x.name}</b><small>{x.quantity || '1'}{x.expires_on ? ` · ${x.expires_on}` : ''}</small></div>)}</div>}
-            {visionResult.note && <div className="visionSourceNote">{visionResult.note}</div>}
+            </div> : <div className="ingredientPreview">{(visionResult.ingredients||[]).map((x,i)=><div key={i}><b>{T(x.name)}</b><small>{T(x.quantity || '1')}{x.expires_on ? ` · ${T(x.expires_on)}` : ''}</small></div>)}</div>}
+            {visionResult.note && <div className="visionSourceNote">{T(visionResult.note)}</div>}
             <button className="primary visionPropose" onClick={proposeVisionWrite} disabled={busy}>{L('확인 대기 작업 생성','生成待确认操作')}</button>
             <small className="visionNote">{L('구조화 결과를 먼저 검토·수정한 뒤 작업을 생성합니다. 데이터베이스 쓰기는 Human-in-the-loop 확인을 거칩니다.','先检查并修改结构化结果，再生成操作。数据库写入必须经过 Human-in-the-loop 确认。')}</small>
           </> : <div className="emptyTrace compact">{L('이미지를 업로드하면 사람이 수정할 수 있는 구조화 인식 결과가 여기에 표시됩니다.','上传图片后，这里会显示可由用户修改的结构化识别结果。')}</div>}
@@ -649,13 +746,13 @@ export default function Home() {
       <div className="managerForm">
         {(manageKind==='schedule'||manageKind==='task') && <input placeholder={manageKind==='schedule'?L('일정 제목 · Schedule title','日程标题 · Schedule title'):L('할 일 제목 · Task title','待办标题 · Task title')} value={manageForm.title} onChange={e=>setManageForm({...manageForm,title:e.target.value})}/>} 
         {manageKind==='schedule' && <input placeholder={L('시간 예: 내일 09:00 · Time','时间，例如：明天 09:00 · Time') } value={manageForm.scheduled_at} onChange={e=>setManageForm({...manageForm,scheduled_at:e.target.value})}/>} 
-        {manageKind==='task' && <><select value={manageForm.priority} onChange={e=>setManageForm({...manageForm,priority:e.target.value})}><option value="high">high</option><option value="medium">medium</option><option value="low">low</option></select><input placeholder="마감 시간" value={manageForm.due_at} onChange={e=>setManageForm({...manageForm,due_at:e.target.value})}/></>} 
+        {manageKind==='task' && <><select value={manageForm.priority} onChange={e=>setManageForm({...manageForm,priority:e.target.value})}><option value="high">high</option><option value="medium">medium</option><option value="low">low</option></select><input placeholder={L('마감 시간','截止时间')} value={manageForm.due_at} onChange={e=>setManageForm({...manageForm,due_at:e.target.value})}/></>} 
         {manageKind==='expense' && <><input placeholder={L('지출 항목 · Expense item','消费项目 · Expense item') } value={manageForm.item} onChange={e=>setManageForm({...manageForm,item:e.target.value})}/><input type="number" placeholder={L('금액 KRW · Amount','金额 KRW · Amount') } value={manageForm.amount} onChange={e=>setManageForm({...manageForm,amount:e.target.value})}/><input placeholder={L('카테고리 · Category','类别 · Category') } value={manageForm.category} onChange={e=>setManageForm({...manageForm,category:e.target.value})}/></>} 
         {manageKind==='ingredient' && <><input placeholder={L('식재료 이름 · Ingredient','食材名称 · Ingredient') } value={manageForm.name} onChange={e=>setManageForm({...manageForm,name:e.target.value})}/><input placeholder={L('수량 · Quantity','数量 · Quantity') } value={manageForm.quantity} onChange={e=>setManageForm({...manageForm,quantity:e.target.value})}/><input placeholder={L('유효기간 예: 3일 후 · Expiry','有效期，例如：3天后 · Expiry') } value={manageForm.expires_on} onChange={e=>setManageForm({...manageForm,expires_on:e.target.value})}/></>} 
         <button className="primary" onClick={addContextItem} disabled={busy}>{L('Context에 추가','添加到 Context')}</button>
       </div>
-      {manageNotice && <div className="manageNotice">{manageNotice}</div>}
-      <div className="historyBlock"><div className="historyHead"><span>ACTION HISTORY</span><small>{L('최근 10개 · Undo 가능','最近10条 · 可 Undo')} · ACTION LOG</small></div>{data.history?.length ? data.history.map(h=><div className="historyRow" key={h.id}><div><b>{h.summary}</b><small>{h.operation} · {h.entity_type} · #{h.entity_id ?? '-'}</small></div><button disabled={h.undone} onClick={()=>undoHistory(h.id)}>{h.undone?L('취소됨 · Undone','已撤销 · Undone'):L('실행 취소 · Undo','撤销操作 · Undo')}</button></div>) : <div className="emptyTrace compact">{L('아직 작업 기록이 없습니다. Context를 추가, 수정 또는 삭제하면 여기에 기록됩니다.','暂无操作记录。新增、修改或删除 Context 后会记录在这里。')}<small className="enTitle">No action history yet.</small></div>}</div>
+      {manageNotice && <div className="manageNotice">{T(manageNotice)}</div>}
+      <div className="historyBlock"><div className="historyHead"><span>ACTION HISTORY</span><small>{L('최근 10개 · Undo 가능','最近10条 · 可 Undo')} · ACTION LOG</small></div>{data.history?.length ? data.history.map(h=><div className="historyRow" key={h.id}><div><b>{T(h.summary)}</b><small>{h.operation} · {h.entity_type} · #{h.entity_id ?? '-'}</small></div><button disabled={h.undone} onClick={()=>undoHistory(h.id)}>{h.undone?L('취소됨 · Undone','已撤销 · Undone'):L('실행 취소 · Undo','撤销操作 · Undo')}</button></div>) : <div className="emptyTrace compact">{L('아직 작업 기록이 없습니다. Context를 추가, 수정 또는 삭제하면 여기에 기록됩니다.','暂无操作记录。新增、修改或删除 Context 后会记录在这里。')}<small className="enTitle">No action history yet.</small></div>}</div>
     </section>
 
 
@@ -680,7 +777,7 @@ export default function Home() {
         </div>
         <div className="evaluationList">
           {(evaluation.tests||[]).map((t,i)=><div className={`evaluationRow ${t.passed?'pass':'fail'}`} key={`${t.name}-${i}`}>
-            <span>{t.passed?'PASS':'FAIL'}</span><div><b>{evaluationName(t.name)}<small className="enTitle block">{evaluationNameEn(t.name)}</small></b><small>{t.category} · {t.detail}</small></div>
+            <span>{t.passed?'PASS':'FAIL'}</span><div><b>{evaluationName(t.name)}<small className="enTitle block">{evaluationNameEn(t.name)}</small></b><small>{t.category} · {T(t.detail)}</small></div>
           </div>)}
         </div>
         <div className="evaluationNote">{L('이 결과는 로컬 재현 가능 테스트에서 나온 것이며 범용 대규모 모델 벤치마크 점수를 의미하지 않습니다.','该结果来自本地可重复测试，并不代表通用大模型基准测试得分。')}<small className="enBody">These results come from reproducible local tests and are not a general-purpose large-model benchmark score.</small></div>
@@ -700,7 +797,7 @@ export default function Home() {
         {trace.length ? <div className="trace">
           {trace.map((x,i)=><div className={`traceItem ${x.status || 'done'}`} key={`${x.stage}-${i}`}>
             <div className="traceIndex">{String(i+1).padStart(2,'0')}</div>
-            <div><b>{x.title}</b><small>{x.detail}</small></div>
+            <div><b>{T(x.title)}</b><small>{T(x.detail)}</small></div>
             <span>{x.stage}</span>
           </div>)}
         </div> : <div className="emptyTrace">{L('Agent 요청을 실행하면 Input → Context → Reasoning → Tool → Safety → Execution 흐름을 표시합니다. 단순한 AI 텍스트만 보여주지 않습니다.','运行 Agent 请求后，将展示 Input → Context → Reasoning → Tool → Safety → Execution 流程，而不是只显示 AI 文本。')}</div>}
@@ -720,17 +817,17 @@ export default function Home() {
     <section className="contextWide card">
       <div className="cardHead"><div><span className="sectionTag">LIVE CONTEXT</span><h3>Personal Context Snapshot</h3></div><small>{L('실시간 갱신','实时更新')} · LIVE</small></div>
       <div className="contextGrid wide">
-        <div><span>{L('선호','偏好')} · PREFERENCE</span>{data.preferences.length ? data.preferences.slice(0,3).map(x=><p key={x.id}><b>{x.key}</b><small>{x.value}</small></p>) : <em>{L('선호 없음','暂无偏好')}</em>}</div>
-        <div><span>{L('유통기한 임박 식재료','临期食材')} · EXPIRING FOOD</span>{expiring.length ? expiring.map(x=><p key={x.id}><b>{x.name}</b><small>{x.quantity} · {x.expires_on}</small></p>) : <em>{L('기록 없음','暂无记录')}</em>}</div>
-        <div><span>{L('확인 대기 작업','待确认操作')} · PENDING ACTIONS</span>{data.pending_actions?.length ? data.pending_actions.slice(0,3).map(x=><p key={x.id}><b>#{x.id} {x.summary}</b><small>{x.status}</small></p>) : <em>{L('확인 대기 작업 없음','暂无待确认操作')}</em>}</div>
+        <div><span>{L('선호','偏好')} · PREFERENCE</span>{data.preferences.length ? data.preferences.slice(0,3).map(x=><p key={x.id}><b>{T(x.key)}</b><small>{T(x.value)}</small></p>) : <em>{L('선호 없음','暂无偏好')}</em>}</div>
+        <div><span>{L('유통기한 임박 식재료','临期食材')} · EXPIRING FOOD</span>{expiring.length ? expiring.map(x=><p key={x.id}><b>{T(x.name)}</b><small>{T(x.quantity)} · {T(x.expires_on)}</small></p>) : <em>{L('기록 없음','暂无记录')}</em>}</div>
+        <div><span>{L('확인 대기 작업','待确认操作')} · PENDING ACTIONS</span>{data.pending_actions?.length ? data.pending_actions.slice(0,3).map(x=><p key={x.id}><b>#{x.id} {T(x.summary)}</b><small>{x.status}</small></p>) : <em>{L('확인 대기 작업 없음','暂无待确认操作')}</em>}</div>
       </div>
     </section>
 
     <section className="grid">
-      <div className="card listCard"><span className="sectionTag">SCHEDULE</span><h3>{L('스마트 일정','智能日程')}</h3>{data.schedules.length ? data.schedules.map(x=><div className="row manageRow" key={x.id}><div><b>{x.title}</b><small>{x.scheduled_at}</small></div><div><button onClick={()=>editItem('schedule',x)}>{L('수정 · Edit','修改 · Edit')}</button><button onClick={()=>removeItem('schedule',x.id)}>{L('삭제 · Delete','删除 · Delete')}</button></div></div>) : <p className="muted">{L('데이터 없음','暂无数据')}</p>}</div>
-      <div className="card listCard"><span className="sectionTag">TASKS</span><h3>{L('할 일 / 우선순위','待办 / 优先级')}</h3>{data.tasks.length ? data.tasks.map(x=><div className="row manageRow" key={x.id}><div><b>{x.title}</b><small>{x.priority} · {x.due_at || L('마감 미설정','未设置截止时间')}</small></div><div><button onClick={()=>toggleTask(x)}>{L('완료 · Done','完成 · Done')}</button><button onClick={()=>editItem('task',x)}>{L('수정 · Edit','修改 · Edit')}</button><button onClick={()=>removeItem('task',x.id)}>{L('삭제 · Delete','删除 · Delete')}</button></div></div>) : <p className="muted">{L('데이터 없음','暂无数据')}</p>}</div>
-      <div className="card listCard"><span className="sectionTag">EXPENSES</span><h3>{L('지출 Context','消费 Context')}</h3>{data.expenses.length ? data.expenses.map(x=><div className="row manageRow" key={x.id}><div><b>{x.item}</b><small>₩ {Number(x.amount).toLocaleString()} · {x.category}</small></div><div><button onClick={()=>editItem('expense',x)}>{L('수정 · Edit','修改 · Edit')}</button><button onClick={()=>removeItem('expense',x.id)}>{L('삭제 · Delete','删除 · Delete')}</button></div></div>) : <p className="muted">{L('데이터 없음','暂无数据')}</p>}</div>
-      <div className="card listCard"><span className="sectionTag">FOOD</span><h3>{L('냉장고 / 식재료','冰箱 / 食材')}</h3>{data.ingredients.length ? data.ingredients.map(x=><div className="row manageRow" key={x.id}><div><b>{x.name}</b><small>{x.quantity}{x.expires_on ? ` · ${x.expires_on}` : ''}</small></div><div><button onClick={()=>editItem('ingredient',x)}>{L('수정 · Edit','修改 · Edit')}</button><button onClick={()=>removeItem('ingredient',x.id)}>{L('삭제 · Delete','删除 · Delete')}</button></div></div>) : <p className="muted">{L('식재료 Context 없음','暂无食材 Context')}</p>}</div>
+      <div className="card listCard"><span className="sectionTag">SCHEDULE</span><h3>{L('스마트 일정','智能日程')}</h3>{data.schedules.length ? data.schedules.map(x=><div className="row manageRow" key={x.id}><div><b>{T(x.title)}</b><small>{T(x.scheduled_at)}</small></div><div><button onClick={()=>editItem('schedule',x)}>{L('수정 · Edit','修改 · Edit')}</button><button onClick={()=>removeItem('schedule',x.id)}>{L('삭제 · Delete','删除 · Delete')}</button></div></div>) : <p className="muted">{L('데이터 없음','暂无数据')}</p>}</div>
+      <div className="card listCard"><span className="sectionTag">TASKS</span><h3>{L('할 일 / 우선순위','待办 / 优先级')}</h3>{data.tasks.length ? data.tasks.map(x=><div className="row manageRow" key={x.id}><div><b>{T(x.title)}</b><small>{x.priority} · {T(x.due_at) || L('마감 미설정','未设置截止时间')}</small></div><div><button onClick={()=>toggleTask(x)}>{L('완료 · Done','完成 · Done')}</button><button onClick={()=>editItem('task',x)}>{L('수정 · Edit','修改 · Edit')}</button><button onClick={()=>removeItem('task',x.id)}>{L('삭제 · Delete','删除 · Delete')}</button></div></div>) : <p className="muted">{L('데이터 없음','暂无数据')}</p>}</div>
+      <div className="card listCard"><span className="sectionTag">EXPENSES</span><h3>{L('지출 Context','消费 Context')}</h3>{data.expenses.length ? data.expenses.map(x=><div className="row manageRow" key={x.id}><div><b>{T(x.item)}</b><small>₩ {Number(x.amount).toLocaleString()} · {T(x.category)}</small></div><div><button onClick={()=>editItem('expense',x)}>{L('수정 · Edit','修改 · Edit')}</button><button onClick={()=>removeItem('expense',x.id)}>{L('삭제 · Delete','删除 · Delete')}</button></div></div>) : <p className="muted">{L('데이터 없음','暂无数据')}</p>}</div>
+      <div className="card listCard"><span className="sectionTag">FOOD</span><h3>{L('냉장고 / 식재료','冰箱 / 食材')}</h3>{data.ingredients.length ? data.ingredients.map(x=><div className="row manageRow" key={x.id}><div><b>{T(x.name)}</b><small>{T(x.quantity)}{x.expires_on ? ` · ${T(x.expires_on)}` : ''}</small></div><div><button onClick={()=>editItem('ingredient',x)}>{L('수정 · Edit','修改 · Edit')}</button><button onClick={()=>removeItem('ingredient',x.id)}>{L('삭제 · Delete','删除 · Delete')}</button></div></div>) : <p className="muted">{L('식재료 Context 없음','暂无食材 Context')}</p>}</div>
     </section>
 
     <footer>Life Agent v1.2 · Voice Input · AI Capability Gateway · Multimodal Review · Evaluation Lab</footer>
